@@ -1,0 +1,79 @@
+{
+  "theme": "dark",
+  "archetype": "Archetype 4: Swiss & High-Contrast",
+  "design_philosophy": "Objective, function-first, and highly structured. A command-center feel for investors and builders, emphasizing clarity of data.",
+  "colors": {
+    "background_base": "#09090B",
+    "background_surface": "#121214",
+    "background_elevated": "#1A1A1E",
+    "text_primary": "#FAFAFA",
+    "text_secondary": "#A1A1AA",
+    "text_tertiary": "#71717A",
+    "border_subtle": "rgba(255, 255, 255, 0.1)",
+    "border_focus": "rgba(255, 255, 255, 0.3)",
+    "brand_primary": "#FFFFFF",
+    "brand_primary_foreground": "#000000",
+    "accent_yield": "#10B981",
+    "accent_ai": "#2563EB",
+    "accent_warning": "#F59E0B"
+  },
+  "typography": {
+    "heading_font": "Chivo",
+    "body_font": "IBM Plex Sans",
+    "mono_font": "JetBrains Mono",
+    "h1_max": "text-5xl sm:text-6xl",
+    "h2": "text-3xl sm:text-4xl",
+    "h3": "text-xl sm:text-2xl",
+    "h4": "text-lg sm:text-xl",
+    "body": "text-base",
+    "labels": "text-xs uppercase tracking-[0.2em]"
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "p-1, p-2, p-4, p-6, p-8, p-12",
+    "container_padding": "p-6 or p-8 inside bordered containers",
+    "dashboard_grid": "MODE B: 'Control Room' grid. Base grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-4 or gap-6.",
+    "alignment": "Strict left-alignment for data and forms.",
+    "border_radius": "max 8px. Strictly cardless or sharp edges preferred."
+  },
+  "surface_strategies": {
+    "header": "Crystal Glass: backdrop-blur-xl bg-black/60 with 1px border-white/10.",
+    "dashboard_cards": "Grid Borders: Flat backgrounds, 1px subtle border, no shadows.",
+    "hover_states": "translate-y-[-4px], border-white/30, explicit hover text colors."
+  },
+  "components_and_tech": {
+    "ui_library": "shadcn/ui",
+    "icons": "@phosphor-icons/react",
+    "charts": "recharts",
+    "toast": "sonner",
+    "animations": "framer-motion"
+  },
+  "media_and_images": {
+    "hero_abstract_bg": {
+      "url": "https://images.unsplash.com/photo-1746470427686-4c3551f3d689?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMHRlY2glMjBkYXRhJTIwbmV0d29ya3xlbnwwfHx8fDE3ODEzNDg2NzJ8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Deep blue and black abstract data network pattern."
+    },
+    "builder_avatar_1": {
+      "url": "https://images.unsplash.com/photo-1506863530036-1efeddceb993?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxMzQ4NjcyfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Grayscale photo of a female builder."
+    },
+    "builder_avatar_2": {
+      "url": "https://images.unsplash.com/photo-1532074205216-d0e1f4b87368?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxMzQ4NjcyfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Portrait of a female builder wearing black shirt."
+    },
+    "revenue_crypto_asset": {
+      "url": "https://images.unsplash.com/photo-1621504450181-5d356f61d307?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHw0fHxibG9ja2NoYWluJTIwY3J5cHRvJTIwY29pbnxlbnwwfHx8fDE3ODEzNDg2ODF8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Silver and gold coins, use as visual cue for USDY yields."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Write components in .js/.jsx files (not .tsx) as requested.",
+    "Install 'Chivo' and 'IBM Plex Sans' via Google Fonts.",
+    "Use @phosphor-icons/react for all icons.",
+    "Implement 'Control Room' grid layout for the Investor Portfolio and Idea Transparency queues.",
+    "EVM Wallet Connection must be placed prominently in the sticky top navigation bar.",
+    "Apply data-testid attributes to ALL interactive elements (buttons, links, inputs) using kebab-case and role-based naming (e.g., data-testid='connect-wallet-button').",
+    "Never center-align headings by default; strictly left-align text to maintain the Swiss aesthetic.",
+    "For the AI Investment recommendations, use the accent_ai color (#2563EB) for visual indicators.",
+    "Use Tailwind's border-collapse and 1px borders to achieve the 'Technical Grid' look for data-heavy widgets."
+  ]
+}
