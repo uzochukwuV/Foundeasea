@@ -1,5 +1,13 @@
 {
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
-  "/page": "/"
+  "/agent/page": "/agent",
+  "/builders/[address]/page": "/builders/[address]",
+  "/chair/[ideaId]/page": "/chair/[ideaId]",
+  "/create/page": "/create",
+  "/discover/page": "/discover",
+  "/ideas/[id]/page": "/ideas/[id]",
+  "/milestones/[id]/page": "/milestones/[id]",
+  "/page": "/",
+  "/portfolio/page": "/portfolio"
 }

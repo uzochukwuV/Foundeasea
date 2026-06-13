@@ -119,6 +119,25 @@ IDEAS: List[Dict[str, Any]] = [
     },
 ]
 
+LIVE_EVENTS = [
+    {"id": "evt-1", "type": "milestone", "message": "Milestone 2 validated at 91% confidence", "ideaId": "idea-104", "time": "2m ago"},
+    {"id": "evt-2", "type": "chair", "message": "Chair bid placed for 8,400 USDY", "ideaId": "idea-088", "time": "9m ago"},
+    {"id": "evt-3", "type": "builder", "message": "Maya Chen completed 5th consecutive delivery", "ideaId": "idea-104", "time": "18m ago"},
+    {"id": "evt-4", "type": "signal", "message": "27 new signal stakes joined Creator Deposit Marketplace", "ideaId": "idea-097", "time": "31m ago"},
+]
+
+AI_LOGS = [
+    {"id": "log-104-1", "ideaId": "idea-104", "decisionType": "IDEA_RANK", "confidence": 91, "inputHash": "ipfs://bafy104input", "outputHash": "ipfs://bafy104output", "summary": "Strong revenue-hook clarity and credible builder proof."},
+    {"id": "log-104-2", "ideaId": "idea-104", "decisionType": "MILESTONE_VALIDATE", "confidence": 88, "inputHash": "ipfs://bafy104m2in", "outputHash": "ipfs://bafy104m2out", "summary": "Stripe webhook shipped with documented revenue events."},
+    {"id": "log-088-1", "ideaId": "idea-088", "decisionType": "DAO_RECOMMEND", "confidence": 76, "inputHash": "ipfs://bafy088dao", "outputHash": "ipfs://bafy088vote", "summary": "Recommend extension over slash due to partial deliverable proof."},
+]
+
+INVESTORS = [
+    {"wallet": "0xA91b...2fC4", "held": 18420, "supplyPercent": 2.18, "entryPrice": 1.12, "unrealizedPnl": 8200, "signalOnly": False},
+    {"wallet": "0x44e2...B93a", "held": 12100, "supplyPercent": 1.31, "entryPrice": 1.48, "unrealizedPnl": 3100, "signalOnly": False},
+    {"wallet": "0xfE18...6aC0", "held": 0, "supplyPercent": 0, "entryPrice": 0, "unrealizedPnl": 0, "signalOnly": True},
+]
+
 BUILDERS: List[Dict[str, Any]] = [
     {
         "address": "0xA91b...2fC4",
@@ -162,10 +181,10 @@ BUILDERS: List[Dict[str, Any]] = [
 ]
 
 MILESTONES: List[Dict[str, Any]] = [
-    {"ideaId": "idea-104", "label": "MVP analytics shipped", "status": "released", "amount": 85000, "confidence": 92},
-    {"ideaId": "idea-104", "label": "Stripe webhook verified", "status": "validated", "amount": 125000, "confidence": 88},
-    {"ideaId": "idea-088", "label": "GitHub proof bot", "status": "in_review", "amount": 90000, "confidence": 71},
-    {"ideaId": "idea-073", "label": "Conviction voting prototype", "status": "submitted", "amount": 70000, "confidence": 64},
+    {"id": "milestone-104-1", "ideaId": "idea-104", "label": "MVP analytics shipped", "status": "released", "amount": 85000, "confidence": 92, "deadline": "2026-07-08", "note": "Dashboard, revenue hook, and usage events deployed.", "ipfs": "ipfs://bafy104m1"},
+    {"id": "milestone-104-2", "ideaId": "idea-104", "label": "Stripe webhook verified", "status": "validated", "amount": 125000, "confidence": 88, "deadline": "2026-08-12", "note": "Webhook test suite passed against live sandbox revenue.", "ipfs": "ipfs://bafy104m2"},
+    {"id": "milestone-088-1", "ideaId": "idea-088", "label": "GitHub proof bot", "status": "in_review", "amount": 90000, "confidence": 71, "deadline": "2026-07-24", "note": "Commit linking and proof parser submitted for AI review.", "ipfs": "ipfs://bafy088m1"},
+    {"id": "milestone-073-1", "ideaId": "idea-073", "label": "Conviction voting prototype", "status": "submitted", "amount": 70000, "confidence": 64, "deadline": "2026-07-30", "note": "Vote lock UI and reward accounting are ready for review.", "ipfs": "ipfs://bafy073m1"},
 ]
 
 REVENUE_SERIES = [
@@ -272,6 +291,116 @@ def idea_feed(
     else:
         ideas.sort(key=lambda item: (item["aiConfidence"], item["trending24hRaise"]), reverse=True)
     return {"count": len(ideas), "data": ideas}
+
+
+@app.get("/api/discovery")
+def discovery(stage: str = Query(default="all"), sort: str = Query(default="ai")) -> Dict[str, Any]:
+    feed = idea_feed(stage=stage, minConfidence=0, sort=sort)["data"]
+    leaderboard = sorted(IDEAS, key=lambda item: item["aiConfidence"] + min(item["trending24hRaise"] / 10000, 15), reverse=True)[:5]
+    return {
+        "filters": ["All", "Trending", "Newly Approved", "Milestone Hit", "Chair Available"],
+        "leaderboard": leaderboard,
+        "ideas": feed,
+        "liveEvents": LIVE_EVENTS,
+    }
+
+
+@app.get("/api/ideas/{idea_id}")
+def idea_detail(idea_id: str) -> Dict[str, Any]:
+    idea = next((item for item in IDEAS if item["id"] == idea_id), IDEAS[0])
+    idea_milestones = [item for item in MILESTONES if item["ideaId"] == idea["id"]]
+    idea_logs = [item for item in AI_LOGS if item["ideaId"] == idea["id"]]
+    return {
+        "idea": {**idea, "currentPrice": 1.84, "convictionTrend": "+12%", "creator": "0xCreator...19aB"},
+        "overview": {
+            "approvalSummary": "AI approved this idea for clear revenue hooks, credible builder execution path, and strong early signal velocity.",
+            "targetMarket": "Vertical SaaS teams with expansion revenue and usage-based pricing.",
+            "roadmap": ["Revenue hook", "Investor dashboard", "Expansion alert engine", "Self-serve onboarding"],
+            "comments": [
+                {"author": "0x7a4f...e921", "text": "How fast can the Stripe sync support multi-tenant usage?"},
+                {"author": "0x91be...13c0", "text": "Backed this because revenue visibility is already in the MVP."},
+            ],
+        },
+        "milestones": idea_milestones,
+        "token": {
+            "prices": [1.05, 1.12, 1.21, 1.38, 1.62, 1.74, 1.84],
+            "orderBook": [{"side": "ask", "price": 1.91, "amount": 3400}, {"side": "bid", "price": 1.77, "amount": 2800}],
+            "trades": [{"wallet": "0x44e2...B93a", "amount": 1200, "price": 1.82}, {"wallet": "0x77f0...AA12", "amount": 800, "price": 1.79}],
+            "distribution": {"investors": 52, "builder": 20, "creator": 15, "chair": 5, "reserve": 8},
+        },
+        "aiLogs": idea_logs,
+        "investors": INVESTORS,
+        "chair": {"holder": "0xChair...88A1", "paid": 8400, "listed": True, "acquiredAt": "2026-06-02"},
+        "builder": BUILDERS[0],
+    }
+
+
+@app.get("/api/milestones/{milestone_id}")
+def milestone_detail(milestone_id: str) -> Dict[str, Any]:
+    milestone = next((item for item in MILESTONES if item["id"] == milestone_id), MILESTONES[0])
+    idea = next((item for item in IDEAS if item["id"] == milestone["ideaId"]), IDEAS[0])
+    return {
+        "milestone": milestone,
+        "idea": idea,
+        "buildLog": [
+            {"type": "submission", "author": "Builder", "text": milestone["note"], "link": milestone["ipfs"]},
+            {"type": "commit", "author": "GitHub", "text": "32 commits linked as proof of work", "link": "https://github.com/foundersea/proof"},
+        ],
+        "chairThread": [{"author": "Chair", "text": "Prioritize onboarding analytics before advanced alerts."}],
+        "validation": {"summary": "The builder submitted a working API with documented endpoints. Test coverage is 67%, below the 80% target, resulting in moderate confidence.", "releaseStatus": milestone["status"]},
+        "investorSnapshot": {"holdersAtSubmission": 342, "priceAtSubmission": 1.62, "currentPrice": 1.84, "newCohort": INVESTORS[:2]},
+    }
+
+
+@app.get("/api/builders/{address}")
+def builder_detail(address: str) -> Dict[str, Any]:
+    builder = next((item for item in BUILDERS if item["address"].lower() == address.lower()), BUILDERS[0])
+    return {
+        "builder": builder,
+        "tier": "Elite" if builder["milestonesDelivered"] >= 15 else "Verified",
+        "careerTimeline": [
+            {"idea": "Revenue Radar", "role": "sole builder", "completed": 2, "total": 4, "aiAverage": 90, "earned": 156000, "outcome": "active"},
+            {"idea": "Milestone Escrow", "role": "co-builder", "completed": 3, "total": 3, "aiAverage": 86, "earned": 98000, "outcome": "completed"},
+        ],
+        "skills": ["SaaS", "DeFi", "TypeScript", "Solidity", "Revenue analytics"],
+        "testimonials": [{"from": "Chair 0x88A1", "text": "Ships calmly under uncertainty and explains tradeoffs clearly."}],
+        "stakeStatus": {"stakedAllocation": 128000, "activeEngagements": 2},
+    }
+
+
+@app.get("/api/chair/{idea_id}")
+def chair_auction(idea_id: str) -> Dict[str, Any]:
+    idea = next((item for item in IDEAS if item["id"] == idea_id), IDEAS[0])
+    return {
+        "idea": idea,
+        "rights": ["3× DAO vote weight", "Milestone scope veto", "Builder performance review trigger", "Acquisition rights", "Strategic lead credit"],
+        "currentHolder": "0xChair...88A1",
+        "history": [{"buyer": "0xChair...88A1", "price": 8400, "date": "2026-06-02"}, {"buyer": "0xSeed...4410", "price": 5200, "date": "2026-05-20"}],
+        "auction": {"highestBid": 9100, "endsIn": "18h 24m", "minimumBid": 9400},
+        "health": {"milestoneProgress": "2/4", "builderReputation": idea["builderReputation"], "convictionTrend": "+12%"},
+    }
+
+
+@app.get("/api/create/config")
+def create_config() -> Dict[str, Any]:
+    return {
+        "categories": ["SaaS", "DeFi", "Consumer", "Infrastructure", "Governance"],
+        "gateTypes": ["Open", "Whitelist", "Min Hold", "DAO Curated"],
+        "deposit": {"amount": 500, "asset": "USDY", "approvedCredit": "Credited toward the pool", "rejectedRefund": "90% returned"},
+        "aiReviewEtaMinutes": 10,
+    }
+
+
+@app.get("/api/agent/monitor")
+def agent_monitor() -> Dict[str, Any]:
+    return {
+        "agent": {"name": "FounderSea Strategy Agent", "modelId": env_value("TOKENROUTER_MODEL") or "openai/gpt-4o-mini", "createdAt": "2026-05-01", "totalDecisions": 1284, "averageConfidence": 84, "uptime": "99.7%"},
+        "decisions": AI_LOGS + [
+            {"id": "log-global-1", "ideaId": "idea-097", "decisionType": "REJECTION_FEEDBACK", "confidence": 69, "inputHash": "ipfs://bafy097in", "outputHash": "ipfs://bafy097out", "summary": "Requested clearer creator credibility proof before funding."},
+        ],
+        "breakdown": {"IDEA_RANK": 42, "MILESTONE_VALIDATE": 36, "DAO_RECOMMEND": 14, "REJECTION_FEEDBACK": 8},
+        "anomalies": [{"id": "anom-1", "summary": "DAO overrode one milestone extension after new GitHub proof arrived.", "severity": "low"}],
+    }
 
 
 @app.get("/api/investors/portfolio")

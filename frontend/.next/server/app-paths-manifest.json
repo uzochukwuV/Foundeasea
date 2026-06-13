@@ -1,5 +1,13 @@
 {
   "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/page": "app/page.js"
+  "/agent/page": "app/agent/page.js",
+  "/builders/[address]/page": "app/builders/[address]/page.js",
+  "/chair/[ideaId]/page": "app/chair/[ideaId]/page.js",
+  "/create/page": "app/create/page.js",
+  "/discover/page": "app/discover/page.js",
+  "/ideas/[id]/page": "app/ideas/[id]/page.js",
+  "/milestones/[id]/page": "app/milestones/[id]/page.js",
+  "/page": "app/page.js",
+  "/portfolio/page": "app/portfolio/page.js"
 }

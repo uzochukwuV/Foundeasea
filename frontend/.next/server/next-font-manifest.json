@@ -4,7 +4,39 @@
       "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
       "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
     ],
+    "[project]/app/agent/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
+    ],
+    "[project]/app/builders/[address]/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
+    ],
+    "[project]/app/chair/[ideaId]/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
+    ],
+    "[project]/app/create/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
+    ],
+    "[project]/app/discover/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
+    ],
+    "[project]/app/ideas/[id]/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
+    ],
+    "[project]/app/milestones/[id]/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
+    ],
     "[project]/app/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
+    ],
+    "[project]/app/portfolio/page": [
       "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
       "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2"
     ]

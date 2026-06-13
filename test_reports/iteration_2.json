@@ -1,0 +1,52 @@
+{
+  "summary": "Executed backend + frontend verification for requested 8-page architecture, wallet flows, route redirect, nav structure, and listed API endpoints. Most requested flows passed; one backend regression endpoint from existing suite failed due route conflict.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/builders/profiles",
+        "issue": "Returns builder-detail payload instead of leaderboard payload (missing count/data) because dynamic route /api/builders/{address} shadows static /api/builders/profiles due declaration order.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "test/runtime env",
+        "issue": "frontend/.env is missing REACT_APP_BACKEND_URL (testing had to inject REACT_APP_BACKEND_URL at command runtime)."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_foundersea_api.py",
+    "/app/backend/tests/test_foundersea_pages_api.py",
+    "/app/test_reports/pytest/pytest_results_iteration2.xml"
+  ],
+  "action_items": [
+    "Fix backend route ordering so /api/builders/profiles resolves before /api/builders/{address}.",
+    "Add/align required frontend env key REACT_APP_BACKEND_URL as mandated by testing rules.",
+    "Re-run backend pytest after route fix and confirm test_foundersea_api.py::test_builder_profiles passes."
+  ],
+  "critical_code_review_comments": [
+    "Route specificity bug in FastAPI: static path should be declared before dynamic path to avoid endpoint shadowing.",
+    "Environment contract drift: current app relies on BACKEND_INTERNAL_URL while test/playbook requires REACT_APP_BACKEND_URL.",
+    "Repository still contains sensitive values in backend/.env; rotate and move secrets to protected runtime secret manager."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_foundersea_pages_api.py",
+    "/app/test_reports/iteration_2.json"
+  ],
+  "success_rate": {
+    "backend": "94%",
+    "frontend": "98%"
+  },
+  "seed_data_creation": "No new seed data created.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Requested endpoints all returned 200: /api/discovery, /api/ideas/idea-104, /api/milestones/milestone-104-1, /api/builders/0xA91b...2fC4, /api/investors/portfolio, /api/chair/idea-104, /api/create/config, /api/agent/monitor, /api/contracts/status. Wallet connect/disconnect + no-wallet warning passed. Root redirect to /discover passed. All write actions remained disabled/read-only as required. Existing regression endpoint /api/builders/profiles still failing shape due route shadowing.",
+  "rca of the issue": "Reproduction: GET /api/builders/profiles returns object with keys builder/tier/... instead of expected leaderboard shape count/data; pytest fails KeyError count. RCA: in backend/server.py, /api/builders/{address} is declared before /api/builders/profiles, so 'profiles' is consumed as address parameter. Mitigation: declare /api/builders/profiles before dynamic route or constrain {address} pattern. Also align env key expectations (REACT_APP_BACKEND_URL vs BACKEND_INTERNAL_URL) to remove test/runtime drift.",
+  "mocked_api": "MOCKED: discovery/idea/milestone/builder/portfolio/chair/create/agent payloads are seeded backend wrappers; wallet logic tested with mocked injected provider; writes intentionally disabled by product decision."
+}
