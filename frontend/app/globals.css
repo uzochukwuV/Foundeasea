@@ -35,6 +35,34 @@ body {
 
 .font-family { font-family: var(--font-family), ui-serif, Georgia, serif; }
 .font-inter { font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif; }
+.font-outfit { font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif; }
+.font-plex { font-family: var(--font-plex), ui-sans-serif, system-ui, sans-serif; }
+.font-mono { font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace; }
+
+.enterprise-stage {
+  background:
+    radial-gradient(circle at 70% 10%, rgba(0, 82, 255, 0.22), transparent 28rem),
+    radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.08), transparent 22rem),
+    #050505;
+  color: #ffffff;
+  font-family: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+}
+
+.enterprise-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+.enterprise-card {
+  background: rgba(18, 18, 18, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.enterprise-card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
 
 .paper-stage {
   background:
