@@ -1,79 +1,100 @@
 {
-  "theme": "dark",
-  "archetype": "Archetype 4: Swiss & High-Contrast",
-  "design_philosophy": "Objective, function-first, and highly structured. A command-center feel for investors and builders, emphasizing clarity of data.",
-  "colors": {
-    "background_base": "#09090B",
-    "background_surface": "#121214",
-    "background_elevated": "#1A1A1E",
-    "text_primary": "#FAFAFA",
-    "text_secondary": "#A1A1AA",
-    "text_tertiary": "#71717A",
-    "border_subtle": "rgba(255, 255, 255, 0.1)",
-    "border_focus": "rgba(255, 255, 255, 0.3)",
-    "brand_primary": "#FFFFFF",
-    "brand_primary_foreground": "#000000",
-    "accent_yield": "#10B981",
-    "accent_ai": "#2563EB",
-    "accent_warning": "#F59E0B"
-  },
+  "theme": "Dark",
+  "archetype": "Archetype 5 (Luxury) mixed with Archetype 4 (Swiss & High-Contrast) for Institutional Web3",
+  "domain": "Enterprise Web3 / Institutional Finance",
   "typography": {
-    "heading_font": "Chivo",
+    "heading_font": "Outfit",
     "body_font": "IBM Plex Sans",
     "mono_font": "JetBrains Mono",
-    "h1_max": "text-5xl sm:text-6xl",
-    "h2": "text-3xl sm:text-4xl",
-    "h3": "text-xl sm:text-2xl",
-    "h4": "text-lg sm:text-xl",
-    "body": "text-base",
-    "labels": "text-xs uppercase tracking-[0.2em]"
-  },
-  "layout_and_spacing": {
-    "spacing_scale": "p-1, p-2, p-4, p-6, p-8, p-12",
-    "container_padding": "p-6 or p-8 inside bordered containers",
-    "dashboard_grid": "MODE B: 'Control Room' grid. Base grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-4 or gap-6.",
-    "alignment": "Strict left-alignment for data and forms.",
-    "border_radius": "max 8px. Strictly cardless or sharp edges preferred."
-  },
-  "surface_strategies": {
-    "header": "Crystal Glass: backdrop-blur-xl bg-black/60 with 1px border-white/10.",
-    "dashboard_cards": "Grid Borders: Flat backgrounds, 1px subtle border, no shadows.",
-    "hover_states": "translate-y-[-4px], border-white/30, explicit hover text colors."
-  },
-  "components_and_tech": {
-    "ui_library": "shadcn/ui",
-    "icons": "@phosphor-icons/react",
-    "charts": "recharts",
-    "toast": "sonner",
-    "animations": "framer-motion"
-  },
-  "media_and_images": {
-    "hero_abstract_bg": {
-      "url": "https://images.unsplash.com/photo-1746470427686-4c3551f3d689?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMHRlY2glMjBkYXRhJTIwbmV0d29ya3xlbnwwfHx8fDE3ODEzNDg2NzJ8MA&ixlib=rb-4.1.0&q=85",
-      "description": "Deep blue and black abstract data network pattern."
-    },
-    "builder_avatar_1": {
-      "url": "https://images.unsplash.com/photo-1506863530036-1efeddceb993?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxMzQ4NjcyfDA&ixlib=rb-4.1.0&q=85",
-      "description": "Grayscale photo of a female builder."
-    },
-    "builder_avatar_2": {
-      "url": "https://images.unsplash.com/photo-1532074205216-d0e1f4b87368?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxMzQ4NjcyfDA&ixlib=rb-4.1.0&q=85",
-      "description": "Portrait of a female builder wearing black shirt."
-    },
-    "revenue_crypto_asset": {
-      "url": "https://images.unsplash.com/photo-1621504450181-5d356f61d307?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHw0fHxibG9ja2NoYWluJTIwY3J5cHRvJTIwY29pbnxlbnwwfHx8fDE3ODEzNDg2ODF8MA&ixlib=rb-4.1.0&q=85",
-      "description": "Silver and gold coins, use as visual cue for USDY yields."
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tighter font-medium",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-medium",
+      "h3": "text-xl sm:text-2xl tracking-tight",
+      "h4": "text-lg sm:text-xl",
+      "body": "text-base leading-relaxed text-gray-400",
+      "overline": "text-xs tracking-[0.2em] uppercase font-semibold text-blue-500"
     }
   },
+  "color_palette": {
+    "background": "#050505",
+    "surface": "#121212",
+    "surface_elevated": "#1E1E1E",
+    "border": "rgba(255, 255, 255, 0.1)",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A1A1AA",
+    "accent_primary": "#0052FF",
+    "accent_hover": "#3377FF",
+    "success": "#10B981"
+  },
+  "layout_and_spacing": {
+    "philosophy": "Generous spacing, architectural grids, strict hierarchy.",
+    "container_padding": "px-6 md:px-12 lg:px-24 py-20 lg:py-32",
+    "grid_system": "Bento grids for product features (grid-cols-1 md:grid-cols-3 lg:grid-cols-4), wide gap-8 to gap-12.",
+    "surfaces": "Grid Borders - technical look. border-collapse style layout for data and features. Flat backgrounds, 1px subtle border, no heavy shadows. Glassmorphism for sticky nav."
+  },
+  "motion_and_interaction": {
+    "hover_states": "Slight lift (-translate-y-1), border color brightens to rgba(255,255,255,0.3).",
+    "transitions": "transition-all duration-300 ease-in-out",
+    "animations": "Subtle fade-in on scroll for main sections."
+  },
+  "components": {
+    "marketing_navbar": {
+      "description": "Distinct from the main app navbar. Glassmorphism effect: backdrop-blur-xl bg-black/60 border-b border-white/10.",
+      "links": ["Products", "Resources", "Ecosystem", "About"],
+      "cta": {
+        "text": "Launch App",
+        "route": "/discover",
+        "style": "bg-accent_primary text-white px-6 py-2 rounded-none hover:bg-accent_hover font-medium text-sm transition-colors"
+      }
+    },
+    "hero_section": {
+      "layout": "Centered or heavily asymmetrical. Large typography.",
+      "background": "Abstract data texture with heavy black overlay (bg-black/80) so text is highly legible.",
+      "headline": "Institutional-Grade Finance, Onchain.",
+      "subheadline": "Explore tokenized real-world assets and yield products built for the enterprise."
+    },
+    "trust_strip": {
+      "description": "Logos of partners, auditors, and integrated chains. Grayscale, opacity-50, hover:opacity-100 transition."
+    },
+    "product_suite": {
+      "layout": "Grid of cards. Each card represents a financial product (e.g., Tokenized Treasuries, Global Markets).",
+      "card_style": "bg-surface border border-white/10 p-8 flex flex-col gap-4 hover:border-white/30 transition-colors"
+    },
+    "metrics_section": {
+      "layout": "Large numbers, monospace font for data. Grid cols-3.",
+      "metrics": ["$1B+ TVL", "250+ Assets", "Audited & Regulated"]
+    },
+    "footer": {
+      "description": "Extensive footer with disclaimers, compliance text, and secondary links.",
+      "disclaimer_style": "text-xs text-gray-600 leading-relaxed mt-12 pt-8 border-t border-white/10"
+    }
+  },
+  "media": {
+    "images": [
+      {
+        "category": "hero_background",
+        "url": "https://images.unsplash.com/photo-1644088379091-d574269d422f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGZpbmFuY2UlMjBkYXRhJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3ODEzNTM5MzV8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract blue data network lines."
+      },
+      {
+        "category": "institutional_trust",
+        "url": "https://images.unsplash.com/photo-1542320679-fbb8639c9d13?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzJ8MHwxfHNlYXJjaHwyfHxjb3Jwb3JhdGUlMjBza3lzY3JhcGVyJTIwbG9va2luZyUyMHVwfGVufDB8fHx3aGl0ZXwxNzgxMzUzOTM1fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Corporate skyscraper looking up, black and white."
+      }
+    ],
+    "icons_library": "lucide-react"
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets APCA standards. Minimum 4.5:1 for body text.",
+    "testing_attributes": "All interactive elements MUST include data-testid (e.g., data-testid='marketing-nav-launch-app', data-testid='product-card-usdy')"
+  },
   "instructions_to_main_agent": [
-    "Write components in .js/.jsx files (not .tsx) as requested.",
-    "Install 'Chivo' and 'IBM Plex Sans' via Google Fonts.",
-    "Use @phosphor-icons/react for all icons.",
-    "Implement 'Control Room' grid layout for the Investor Portfolio and Idea Transparency queues.",
-    "EVM Wallet Connection must be placed prominently in the sticky top navigation bar.",
-    "Apply data-testid attributes to ALL interactive elements (buttons, links, inputs) using kebab-case and role-based naming (e.g., data-testid='connect-wallet-button').",
-    "Never center-align headings by default; strictly left-align text to maintain the Swiss aesthetic.",
-    "For the AI Investment recommendations, use the accent_ai color (#2563EB) for visual indicators.",
-    "Use Tailwind's border-collapse and 1px borders to achieve the 'Technical Grid' look for data-heavy widgets."
+    "Build a separate marketing landing page at `/`.",
+    "This landing page MUST use the custom marketing_navbar defined above, NOT the main app navbar.",
+    "The 'Launch App' button in the marketing navbar MUST route to `/discover`.",
+    "Implement the landing page with an enterprise Web3 positioning: dark theme, high contrast, clean sans-serif fonts (Outfit, IBM Plex Sans), and rigorous grid layouts.",
+    "Include specific sections: Hero, Trust/Ecosystem strip, Product Suite, Metrics (TVL, Assets), Insights, and a robust Footer with compliance disclaimers.",
+    "Use pure HTML/Tailwind for marketing layout structures to allow asymmetrical, non-standard layouts. Use Shadcn strictly for interactive components if needed.",
+    "The rest of the app (like /discover, /dashboard) should keep the existing app shell and wallet connect."
   ]
 }
