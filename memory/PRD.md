@@ -51,3 +51,14 @@ User asked to complete FounderSea with smart contracts already done, focusing on
 - Add mobile swipe discovery and bottom action bar.
 - Add SEO/share cards for builder profiles and idea pages.
 - Add secondary-market analytics and vault treemap.
+
+
+## Landing / App Shell Correction
+- Rebuilt `/` as a dedicated enterprise Web3 marketing landing page inspired by Ondo-style architecture.
+- Landing nav is separate from app nav: Products, Resources, Ecosystem, About, and Launch App.
+- `Launch App` routes to `/discover`, where the app shell nav and wallet connect are used.
+- Landing page intentionally has no wallet connect; wallet is app-only.
+- Added enterprise sections: announcement, hero, protocol snapshot, ecosystem strip, product suite, metrics, trust/transparency, insights, and legal-style footer disclaimer.
+
+## Latest Verification
+- Testing agent iteration 3 passed: landing/app shell split verified, build passed, contract status ready.
