@@ -2,18 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-
 type IconProps = { size?: number; color?: string; weight?: string; className?: string };
 
 const IconGlyph = ({ size = 18, color = "currentColor", className = "", children }: IconProps & { children: ReactNode }) => (
@@ -167,6 +155,37 @@ const IdeaCard = ({ idea, selected, onSelect }: { idea: Idea; selected: boolean;
       </div>
       <div className="mt-5 border-t border-[var(--color-stone-surface)] pt-4 text-xs text-[var(--color-ash)]" data-testid={`idea-social-proof-${idea.id}`}>{idea.socialProof}</div>
     </button>
+  );
+};
+
+const VelocityChart = ({ values }: { values: number[] }) => {
+  const max = Math.max(...values, 1);
+  return (
+    <div className="flex h-full items-end gap-3" data-testid="velocity-css-chart">
+      {values.map((value, index) => (
+        <div key={`${value}-${index}`} className="flex flex-1 flex-col items-center gap-2" data-testid={`velocity-bar-${index}`}>
+          <div className="w-full rounded-t-[10px] bg-[var(--color-sky-blue)] transition-[height] duration-200" style={{ height: `${Math.max(12, (value / max) * 210)}px` }} data-testid={`velocity-bar-fill-${index}`} />
+          <span className="text-[12px] text-[var(--color-ash)]" data-testid={`velocity-bar-label-${index}`}>D{index + 1}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const RevenueChart = ({ series }: { series: Portfolio["revenueSeries"] }) => {
+  const max = Math.max(...series.map((item) => item.revenue), 1);
+  return (
+    <div className="flex h-full items-end gap-3" data-testid="revenue-css-chart">
+      {series.map((item) => (
+        <div key={item.month} className="flex flex-1 flex-col items-center gap-2" data-testid={`revenue-bar-${item.month}`}>
+          <div className="flex h-[220px] w-full items-end gap-1">
+            <div className="flex-1 rounded-t-[10px] bg-[var(--color-sky-blue)]" style={{ height: `${Math.max(12, (item.revenue / max) * 220)}px` }} data-testid={`revenue-total-fill-${item.month}`} />
+            <div className="flex-1 rounded-t-[10px] bg-[var(--color-meadow-green)]" style={{ height: `${Math.max(12, (item.earned / max) * 220)}px` }} data-testid={`revenue-earned-fill-${item.month}`} />
+          </div>
+          <span className="text-[12px] text-[var(--color-ash)]" data-testid={`revenue-label-${item.month}`}>{item.month}</span>
+        </div>
+      ))}
+    </div>
   );
 };
 
@@ -344,16 +363,7 @@ export default function Home() {
             </div>
             <div className="cream-panel h-72 min-w-0 p-4" data-testid="funding-velocity-chart">
               {activeIdea ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={activeIdea.fundingVelocity.map((value, index) => ({ day: `D${index + 1}`, value }))}>
-                    <defs><linearGradient id="velocity" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0090ff" stopOpacity={0.35}/><stop offset="95%" stopColor="#0090ff" stopOpacity={0}/></linearGradient></defs>
-                    <CartesianGrid stroke="#f2f0ed" vertical={false} />
-                    <XAxis dataKey="day" stroke="#848281" tickLine={false} axisLine={false} />
-                    <YAxis stroke="#848281" tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "#fff", border: "0", boxShadow: "var(--shadow-subtle)", color: "#343433" }} />
-                    <Area type="monotone" dataKey="value" stroke="#0090ff" fill="url(#velocity)" strokeWidth={3} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <VelocityChart values={activeIdea.fundingVelocity} />
               ) : <div className="flex h-full items-center justify-center text-[15px] text-[var(--color-ash)]" data-testid="funding-chart-loading">Loading velocity...</div>}
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-3" data-testid="selected-idea-stats">
@@ -386,16 +396,7 @@ export default function Home() {
             </div>
             <div className="cream-panel h-72 min-w-0 p-4" data-testid="monthly-revenue-chart">
               {portfolio ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={portfolio.revenueSeries}>
-                    <CartesianGrid stroke="#f2f0ed" vertical={false} />
-                    <XAxis dataKey="month" stroke="#848281" tickLine={false} axisLine={false} />
-                    <YAxis stroke="#848281" tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "#fff", border: "0", boxShadow: "var(--shadow-subtle)", color: "#343433" }} />
-                    <Bar dataKey="revenue" fill="#0090ff" radius={[8, 8, 0, 0]} />
-                    <Bar dataKey="earned" fill="#00ca48" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <RevenueChart series={portfolio.revenueSeries} />
               ) : <div className="flex h-full items-center justify-center text-[15px] text-[var(--color-ash)]" data-testid="revenue-chart-loading">Loading revenue...</div>}
             </div>
             <div className="mt-6 grid gap-3 md:grid-cols-3" data-testid="live-revenue-events">

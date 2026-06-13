@@ -191,7 +191,8 @@ def tokenrouter_strategy(payload: RecommendationRequest, ranked: List[Dict[str, 
         return None
 
     base_url = env_value("TOKENROUTER_BASE_URL") or "https://api.tokenrouter.io/v1"
-    model = env_value("TOKENROUTER_MODEL") or "openai/gpt-4o-mini"
+    preferred_model = env_value("TOKENROUTER_MODEL") or env_value("TOKENROUTER_BASE_MODEL")
+    model_candidates = [model for model in [preferred_model, "openai/gpt-4o-mini"] if model]
     idea_context = json.dumps(ranked, separators=(",", ":"))
     prompt = (
         "You are FounderSea's investment strategy AI. Return only compact JSON with keys: "
@@ -201,25 +202,27 @@ def tokenrouter_strategy(payload: RecommendationRequest, ranked: List[Dict[str, 
     )
 
     try:
-        response = httpx.post(
-            f"{base_url.rstrip('/')}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": "You return valid JSON only."},
-                    {"role": "user", "content": prompt},
-                ],
-                "temperature": 0.25,
-                "max_tokens": 500,
-            },
-            timeout=8,
-        )
-        response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
-        parsed = json.loads(content.strip().removeprefix("```json").removesuffix("```").strip())
-        if isinstance(parsed.get("actions"), list) and parsed.get("headline") and parsed.get("summary"):
-            return parsed
+        for model in model_candidates:
+            response = httpx.post(
+                f"{base_url.rstrip('/')}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": "You return valid JSON only."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.25,
+                    "max_tokens": 500,
+                },
+                timeout=8,
+            )
+            if response.status_code >= 400:
+                continue
+            content = response.json()["choices"][0]["message"]["content"]
+            parsed = json.loads(content.strip().removeprefix("```json").removesuffix("```").strip())
+            if isinstance(parsed.get("actions"), list) and parsed.get("headline") and parsed.get("summary"):
+                return parsed
     except Exception:
         return None
     return None
