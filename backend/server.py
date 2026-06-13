@@ -352,6 +352,12 @@ def milestone_detail(milestone_id: str) -> Dict[str, Any]:
     }
 
 
+@app.get("/api/builders/profiles")
+def builder_profiles() -> Dict[str, Any]:
+    leaderboard = sorted(BUILDERS, key=lambda item: item["revenueGenerated"], reverse=True)
+    return {"count": len(leaderboard), "data": leaderboard}
+
+
 @app.get("/api/builders/{address}")
 def builder_detail(address: str) -> Dict[str, Any]:
     builder = next((item for item in BUILDERS if item["address"].lower() == address.lower()), BUILDERS[0])
@@ -441,12 +447,6 @@ def tax_report() -> StreamingResponse:
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=foundersea-tax-report.csv"},
     )
-
-
-@app.get("/api/builders/profiles")
-def builder_profiles() -> Dict[str, Any]:
-    leaderboard = sorted(BUILDERS, key=lambda item: item["revenueGenerated"], reverse=True)
-    return {"count": len(leaderboard), "data": leaderboard}
 
 
 @app.get("/api/ai/review-queue")

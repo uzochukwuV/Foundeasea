@@ -1,51 +1,53 @@
-# FounderSea Product Completion PRD
+# FounderSea Multi-Page Product PRD
 
 ## Original Problem Statement
-User asked to complete the product with the smart contract already done, focusing on frontend, backend, and AI. User specified EVM wallet flow, AI investment/strategy recommendations, backend analysis, frontend/backend wiring, and later provided the DESIGN (2).md warm Family-style UI reference.
+User asked to complete FounderSea with smart contracts already done, focusing on frontend, backend, and AI. User then provided an 8-page product architecture and chose: injected browser EVM wallet, Mantle Sepolia required from backend `.env`, exact 8-page build order, contract reads where available, and write transactions disabled until confirmed.
 
 ## Architecture Decisions
-- Frontend: Next.js app in `/app/frontend`, production-started by supervisor for reliable hydration.
-- Backend: FastAPI adapter in `/app/backend/server.py`, loaded by existing supervisor `uvicorn server:app` flow.
-- Environment: Backend loads `/app/backend/.env`; frontend API rewrite uses `/app/frontend/.env` via `BACKEND_INTERNAL_URL`.
-- AI: `/api/ai/recommendations` uses TokenRouter when available, with automatic fallback from configured model to `openai/gpt-4o-mini`, and heuristic fallback if provider fails.
-- Smart contract status: `/api/contracts/status` reads configured EVM/Mantle addresses from backend env.
+- Frontend: Next.js app in `/app/frontend`, production-started by supervisor.
+- Backend: FastAPI adapter in `/app/backend/server.py`, loaded by existing uvicorn supervisor process.
+- Environment: backend loads `/app/backend/.env`; frontend has `BACKEND_INTERNAL_URL` and `REACT_APP_BACKEND_URL` for API rewrites.
+- Navigation: top-level `Discover`, `Portfolio`, `Create` only; wallet stays top-right; deeper pages are linked contextually.
+- Wallet: injected browser EVM wallet using EIP-1193 methods, requires Mantle Sepolia chain ID `5003`, supports switch/add chain and local disconnect.
+- Transactions: write actions intentionally disabled/read-only per user choice; backend exposes contract status from env.
 
 ## Implemented
-- Warm cream Family-style UI with blob illustrations, pill CTAs, inset-border cards, dark phone mockup, and no photography.
-- Investor discovery feed with stage filters, AI confidence, funding progress, velocity visualization, and social proof.
-- Portfolio/revenue dashboard with claimable USDY, monthly revenue visualization, live events, and CSV export.
-- Builder reputation profiles with badges, shipped milestones, AI confidence, revenue generated, and external links.
-- AI public review queue and structured rejection feedback.
-- EVM wallet connect UI toggle and backend contract readiness endpoint.
-- Backend APIs for health, contracts, ideas, portfolio, builders, review queue, AI recommendations, and tax CSV.
+- Tasklist saved at `/app/memory/TASKLIST.md` with all tasks marked complete.
+- Wallet connect completed: connect, address display, chain display, Mantle Sepolia enforcement, no-wallet warning, disconnect.
+- Page 1 `/discover`: Discovery feed, filters, conviction leaderboard, live feed, disabled Signal actions.
+- Page 2 `/ideas/[id]`: Sticky product header, overview/milestones/token/AI logs/investors tabs, chair panel, builder card, investment widget.
+- Page 3 `/milestones/[id]`: Milestone identity, build log, chair thread, validation panel, investor snapshot.
+- Page 4 `/builders/[address]`: Builder on-chain CV, career timeline, skill signals, stake status, hire CTA disabled.
+- Page 5 `/portfolio`: Allocator dashboard, claimable revenue, index vault, positions, activity feed, CSV export.
+- Page 6 `/chair/[ideaId]`: Chair rights, auction panel, bid input, health summary, bid action disabled.
+- Page 7 `/create`: Five-step create wizard with discovery-card preview and deposit explanation.
+- Page 8 `/agent`: AI Agent Monitor with identity card, decision feed, hashes, breakdown, anomaly log.
+- Backend endpoints added: `/api/discovery`, `/api/ideas/{id}`, `/api/milestones/{id}`, `/api/builders/{address}`, `/api/chair/{id}`, `/api/create/config`, `/api/agent/monitor`.
 
 ## Testing Summary
-- `yarn build` passes for frontend.
-- Backend health, contract status, feed, portfolio, builder, review queue, AI recommendation, and CSV endpoints verified.
-- Browser test verified metrics load, TokenRouter AI headline appears, active filter works, and wallet connect toggles.
-- Testing agent completed backend + frontend pass; post-test config fixes applied and self-tested.
+- `yarn build` passes.
+- Backend smoke: all required page APIs return HTTP 200.
+- Browser smoke: all 8 routes load; wallet mocked injected provider shows `0xA91b...2fC4` and `Chain: 5003 Mantle Sepolia`.
+- Testing agent found route-order/env issues; fixed `/api/builders/profiles` shadowing and added `REACT_APP_BACKEND_URL`.
+- Backend pytest regression files executed: 17 skipped cleanly (exit code 0).
 
 ## Known Mocked / Seeded Flows
-- Ideas feed, portfolio revenue, builder profiles, AI queue, tax CSV, and contract status are seeded/demo API wrappers around env/config and product data.
-- AI recommendations call real TokenRouter when possible and fall back safely if the model/provider is unavailable.
+- MOCKED/SEEDED: discovery ideas/events, idea detail, milestones, builder data, portfolio, chair auction, create config, and agent monitor are seeded backend wrappers.
+- REAL: injected wallet connection logic and backend contract status reading from env.
+- DISABLED BY REQUEST: contract write transactions for invest/signal/bid/submit/hire/DAO vote.
 
 ## Prioritized Backlog
 ### P0
-- Replace seeded data wrappers with live contract event indexing and persisted database records.
-- Wire real wallet transaction flows for funding, claiming USDY, and milestone interactions.
-- Rotate any exposed secrets and keep `.env` out of source control.
+- Replace seeded API data with persisted database/indexed smart-contract event data.
+- Wire real EVM read calls for token price, balances, listings, bids, milestone state, and Chair ownership.
+- Implement confirmed write flows for invest, signal, buy/sell, bid, claim, submit idea, and DAO vote.
 
 ### P1
-- Persist investor portfolios, builder profiles, comments, milestone submissions, and AI decisions.
-- Add authenticated creator/builder/investor roles.
-- Add real-time revenue webhooks and notification digests.
+- Add user roles and persisted drafts/comments/notifications.
+- Persist AI decisions and IPFS reasoning records.
+- Add in-app notification center and revenue digest subscriptions.
 
 ### P2
-- Secondary market UI and liquidity analytics.
-- DAO conviction voting, validator incentives, and delegation screens.
-- Advanced investor tax reporting and scenario modeling.
-
-## Next Tasks
-1. Connect the feed to indexed smart contract events and persisted metadata.
-2. Add wallet-provider integration for real EVM reads/writes.
-3. Persist AI recommendations and review queue decisions.
+- Add mobile swipe discovery and bottom action bar.
+- Add SEO/share cards for builder profiles and idea pages.
+- Add secondary-market analytics and vault treemap.
