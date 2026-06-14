@@ -21,10 +21,11 @@ import { NETWORKS, DEFAULT_CHAIN } from "../lib/networks";
 import { useWallet } from "../lib/wallet";
 
 const navItems = [
-  { href: "/discover", label: "Discover", icon: Compass, description: "Browse ideas" },
+  { href: "/discover", label: "Explore", icon: Compass, description: "Browse ideas" },
+  { href: "/create", label: "Create", icon: Lightning, description: "Launch new idea" },
   { href: "/builders", label: "Builders", icon: Users, description: "View builders" },
   { href: "/agent", label: "AI Monitor", icon: Bot, description: "AI decisions" },
-  { href: "/tokens", label: "Tokens", icon: Coins, description: "Your positions" },
+  { href: "/portfolio", label: "Portfolio", icon: Coins, description: "Your positions" },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingCart, description: "Trade tokens" },
 ];
 
