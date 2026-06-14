@@ -284,6 +284,27 @@ export class IdeasController {
     }
   }
 
+  /**
+   * Get comprehensive idea product page data
+   * Includes funding, builders, funders, and voting information
+   */
+  @Get(':ideaId/product')
+  @ApiOperation({ summary: 'Get comprehensive idea product page data' })
+  async getIdeaProductPage(@Param('ideaId') ideaId: string) {
+    this.logger.log(`[GET /ideas/:ideaId/product] Fetching full product page: ${ideaId}`);
+
+    try {
+      const productData = await this.ideaService.getIdeaProductPage(BigInt(ideaId));
+      return {
+        success: true,
+        data: productData,
+      };
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to get idea product page ${ideaId}:`, error.message);
+      throw error;
+    }
+  }
+
   @Get()
   @ApiOperation({ summary: 'List all ideas' })
   async listIdeas(@Query('limit') limit: string = '10') {

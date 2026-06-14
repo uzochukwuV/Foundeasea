@@ -469,4 +469,266 @@ export class IdeaService {
   async uploadMetadataToPinata(metadata: any): Promise<string> {
     return this.uploadToPinata(metadata);
   }
+
+  /**
+   * Get comprehensive idea product page data
+   * Includes: idea info, funding status, builder, funders, milestones, voting
+   */
+  async getIdeaProductPage(ideaId: bigint) {
+    const ideaFactoryAddress = this.contractService.getIdeaFactoryAddress();
+    const ideaFactoryAbi = this.contractService.getIdeaFactoryAbi();
+    const abi = Array.isArray(ideaFactoryAbi) ? ideaFactoryAbi : JSON.parse(ideaFactoryAbi);
+    const fundingPoolAbi = this.contractService.getFundingPoolAbi();
+    const poolAbi = Array.isArray(fundingPoolAbi) ? fundingPoolAbi : JSON.parse(fundingPoolAbi);
+
+    // 1. Get basic idea data
+    const idea = await this.contractService.readContract(ideaFactoryAddress, abi, 'getIdea', [ideaId]);
+    const [creator, ideaToken, fundingPool, fundingGate, status, aiScore, approvalReasonHash, config] = idea;
+
+    // 2. Get funding pool full data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let fundingData: any = null;
+    let funders: { address: string; amount: number }[] = [];
+    let milestones: any[] = [];
+    let builder: { address: string; milestones: any[] } | null = null;
+
+    if (fundingPool && fundingPool !== '0x0000000000000000000000000000000000000000') {
+      try {
+        // Get funding pool basic data
+        const [softCap, hardCap, raisedAmount, competitionPrizeBps, builderAssigned, fundingClosed, fundingToken, daoAddress] =
+          await Promise.all([
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'softCap', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'hardCap', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'raisedAmount', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'competitionPrizeBps', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'builderAssigned', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'fundingClosed', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'getFundingToken', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'dao', []),
+          ]);
+
+        // Get milestones
+        const milestoneCount = await this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'getMilestoneCount', []);
+        milestones = [];
+        for (let i = 0; i < Number(milestoneCount); i++) {
+          try {
+            const milestone = await this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'milestones', [i]);
+            milestones.push({
+              index: i,
+              amount: Number(milestone[0]),
+              deadline: Number(milestone[1]),
+              released: milestone[2],
+              validated: milestone[3],
+              status: milestone[4],
+            });
+          } catch (e) {
+            // Milestone might not exist
+          }
+        }
+
+        // Get builder info if assigned
+        if (builderAssigned) {
+          try {
+            const builderAddr = await this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'builder', []);
+            builder = {
+              address: builderAddr,
+              milestones: milestones,
+            };
+          } catch (e) {
+            this.logger.warn(`Could not get builder for idea ${ideaId}`);
+          }
+        }
+
+        // Get funders (from FundingPool events or try to get depositor list)
+        // Note: Full funder list requires indexing events - returning mock for now
+        funders = [
+          // In production, this would come from indexing Deposit events
+        ];
+
+        fundingData = {
+          address: fundingPool,
+          softCap: Number(softCap),
+          hardCap: Number(hardCap),
+          raisedAmount: Number(raisedAmount),
+          competitionPrizeBps: Number(competitionPrizeBps),
+          builderAssigned: Boolean(builderAssigned),
+          fundingClosed: Boolean(fundingClosed),
+          fundingToken: fundingToken,
+          daoAddress: daoAddress,
+          progressPercent: Number(hardCap) > 0 ? Math.min(100, (Number(raisedAmount) / Number(hardCap)) * 100) : 0,
+        };
+      } catch (e: any) {
+        this.logger.warn(`Could not fetch funding pool data for idea ${ideaId}:`, e.message);
+      }
+    }
+
+    // 3. Get idea token data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let tokenData: any = null;
+    if (ideaToken && ideaToken !== '0x0000000000000000000000000000000000000000') {
+      try {
+        const [name, symbol, totalSupply, owner] = await Promise.all([
+          this.contractService.readContract(ideaToken as `0x${string}`, [{ name: 'name', outputs: [{ type: 'string' }], stateMutability: 'view', type: 'function' }], 'name', []),
+          this.contractService.readContract(ideaToken as `0x${string}`, [{ name: 'symbol', outputs: [{ type: 'string' }], stateMutability: 'view', type: 'function' }], 'symbol', []),
+          this.contractService.readContract(ideaToken as `0x${string}`, [{ name: 'totalSupply', outputs: [{ type: 'uint256' }], stateMutability: 'view', type: 'function' }], 'totalSupply', []),
+          this.contractService.readContract(ideaToken as `0x${string}`, [{ name: 'owner', outputs: [{ type: 'address' }], stateMutability: 'view', type: 'function' }], 'owner', []),
+        ]);
+
+        tokenData = {
+          address: ideaToken,
+          name: String(name),
+          symbol: String(symbol),
+          totalSupply: Number(totalSupply),
+          owner: owner,
+        };
+      } catch (e: any) {
+        this.logger.warn(`Could not fetch token data for idea ${ideaId}:`, e.message);
+      }
+    }
+
+    // 4. Get DAO voting proposals
+    let daoProposals: any[] = [];
+    if (fundingData?.daoAddress && fundingData.daoAddress !== '0x0000000000000000000000000000000000000000') {
+      try {
+        const daoAbi = [{
+          name: 'getProposalCount',
+          outputs: [{ type: 'uint256' }],
+          stateMutability: 'view',
+          type: 'function',
+        }];
+
+        const proposalCount = await this.contractService.readContract(fundingData.daoAddress as `0x${string}`, daoAbi, 'getProposalCount', []);
+        
+        // Get recent proposals
+        for (let i = 0; i < Math.min(Number(proposalCount), 10); i++) {
+          try {
+            const proposal = await this.contractService.readContract(fundingData.daoAddress as `0x${string}`, [
+              { name: 'proposals', outputs: [{ type: 'uint256' }, { type: 'string' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'bool' }, { type: 'bool' }], stateMutability: 'view', type: 'function' },
+            ], 'proposals', [i]);
+
+            daoProposals.push({
+              id: i,
+              title: proposal[1],
+              forVotes: Number(proposal[2]),
+              againstVotes: Number(proposal[3]),
+              deadline: Number(proposal[4]),
+              executed: proposal[5],
+              passed: proposal[6],
+              status: proposal[5] ? 'EXECUTED' : (Number(proposal[4]) * 1000 < Date.now() ? 'ENDED' : 'ACTIVE'),
+            });
+          } catch (e) {
+            // Proposal might not exist
+          }
+        }
+      } catch (e: any) {
+        this.logger.warn(`Could not fetch DAO proposals for idea ${ideaId}:`, e.message);
+      }
+    }
+
+    // 5. Get IPFS metadata
+    let metadata = { title: '', description: '', category: '', image: '', oneLiner: '' };
+    try {
+      if (approvalReasonHash && approvalReasonHash.startsWith('Qm') && approvalReasonHash.length > 30) {
+        const response = await axios.get(`https://ipfs.io/ipfs/${approvalReasonHash}`, { timeout: 5000 }).catch(() => null);
+        if (response?.data) {
+          metadata = response.data;
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`Could not fetch metadata for idea ${ideaId}`);
+    }
+
+    // 6. Determine stage based on status and funding state
+    const stage = this.determineIdeaStage({
+      ideaStatus: Number(status),
+      fundingClosed: fundingData?.fundingClosed ?? false,
+      raisedAmount: fundingData?.raisedAmount ?? 0,
+      softCap: fundingData?.softCap ?? 0,
+      builderAssigned: fundingData?.builderAssigned ?? false,
+      daoProposalsCount: daoProposals.length,
+    });
+
+    return {
+      idea: {
+        ideaId: Number(ideaId),
+        title: metadata.title || `Idea #${ideaId}`,
+        oneLiner: metadata.oneLiner || metadata.description?.slice(0, 100) || '',
+        description: metadata.description,
+        category: metadata.category,
+        image: metadata.image,
+        creator,
+        status: Number(status),
+        statusText: this.getStatusText(Number(status)),
+        aiScore: Number(aiScore),
+        approvalReasonHash,
+        stage,
+        config: {
+          targetRaise: Number(config[1]),
+          softCap: Number(config[2]),
+          hardCap: Number(config[3]),
+          fundingDeadline: Number(config[4]),
+          competitionPrizeBps: Number(config[5]),
+          builderAllocBps: Number(config[6]),
+        },
+      },
+      funding: fundingData,
+      token: tokenData,
+      builder,
+      milestones,
+      funders,
+      daoVoting: {
+        address: fundingData?.daoAddress,
+        proposals: daoProposals,
+        totalProposals: daoProposals.length,
+      },
+      metadata: {
+        ipfsHash: approvalReasonHash,
+        gatewayUrl: approvalReasonHash?.startsWith('Qm') ? `https://gateway.pinata.cloud/ipfs/${approvalReasonHash}` : null,
+      },
+    };
+  }
+
+  /**
+   * Determine the current stage of an idea
+   */
+  private determineIdeaStage(data: {
+    ideaStatus: number;
+    fundingClosed: boolean;
+    raisedAmount: number;
+    softCap: number;
+    builderAssigned: boolean;
+    daoProposalsCount: number;
+  }): string {
+    const ideaStatus = data.ideaStatus;
+    const fundingClosed = data.fundingClosed;
+    const builderAssigned = data.builderAssigned;
+    const daoProposalsCount = data.daoProposalsCount;
+
+    // Stage 0: Pending AI Review
+    if (ideaStatus === 0) return 'PENDING_REVIEW';
+
+    // Stage 1: Approved, waiting for funding
+    if (ideaStatus === 1 && !fundingClosed) return 'FUNDING_OPEN';
+
+    // Stage 2: Funding closed, soft cap not met
+    if (ideaStatus === 5) return 'FUNDING_FAILED';
+
+    // Stage 3: Funding succeeded, no builder
+    if (ideaStatus === 4 && !builderAssigned) return 'AWAITING_BUILDER';
+
+    // Stage 4: Builder assigned, in development
+    if (builderAssigned && ideaStatus === 4) return 'IN_DEVELOPMENT';
+
+    // Stage 5: Active with DAO
+    if (daoProposalsCount > 0 && ideaStatus === 4) return 'ACTIVE_WITH_DAO';
+
+    // Stage 6: Completed
+    if (ideaStatus === 6) return 'COMPLETED';
+
+    // Stage 7: Rejected
+    if (ideaStatus === 2) return 'REJECTED';
+
+    // Default: Active
+    return ideaStatus === 4 ? 'ACTIVE' : 'UNKNOWN';
+  }
 }
