@@ -240,6 +240,143 @@ export class IdeaService {
   }
 
   /**
+   * Get comprehensive idea details for frontend display
+   */
+  async getIdeaDetails(ideaId: bigint) {
+    try {
+      const ideaFactoryAddress = this.contractService.getIdeaFactoryAddress();
+      const ideaFactoryAbi = this.contractService.getIdeaFactoryAbi();
+      const abi = Array.isArray(ideaFactoryAbi) ? ideaFactoryAbi : JSON.parse(ideaFactoryAbi);
+
+      // Get basic idea data
+      const idea = await this.contractService.readContract(ideaFactoryAddress, abi, 'getIdea', [ideaId]);
+      const [creator, ideaToken, fundingPool, , status, aiScore, approvalReasonHash] = idea;
+
+      // Get IPFS metadata from approval reason hash if available
+      // Note: For ideas created before Pinata was configured, this will be a keccak256 hash, not retrievable
+      let metadata = { title: '', description: '', category: '', image: '' };
+      try {
+        if (approvalReasonHash && approvalReasonHash.startsWith('Qm') && approvalReasonHash.length > 30) {
+          const response = await axios.get(`https://ipfs.io/ipfs/${approvalReasonHash}`, { timeout: 5000 }).catch(() => null);
+          if (response?.data) {
+            metadata = response.data;
+          }
+        }
+      } catch (e) {
+        this.logger.warn(`Could not fetch metadata for idea ${ideaId}`);
+      }
+
+      // Get funding pool details
+      interface FundingPoolData {
+        softCap: number;
+        hardCap: number;
+        raisedAmount: number;
+        competitionPrizeBps: number;
+        builderAssigned: boolean;
+        fundingClosed: boolean;
+      }
+      let fundingPoolData: FundingPoolData | null = null;
+      try {
+        const fundingPoolAbi = this.contractService.getFundingPoolAbi();
+        const poolAbi = Array.isArray(fundingPoolAbi) ? fundingPoolAbi : JSON.parse(fundingPoolAbi);
+        
+        const [softCap, hardCap, raisedAmount, competitionPrizeBps, builderAssigned, fundingClosed] = 
+          await Promise.all([
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'softCap', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'hardCap', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'raisedAmount', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'competitionPrizeBps', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'builderAssigned', []),
+            this.contractService.readContract(fundingPool as `0x${string}`, poolAbi, 'fundingClosed', []),
+          ]);
+
+        fundingPoolData = {
+          softCap: Number(softCap),
+          hardCap: Number(hardCap),
+          raisedAmount: Number(raisedAmount),
+          competitionPrizeBps: Number(competitionPrizeBps),
+          builderAssigned: Boolean(builderAssigned),
+          fundingClosed: Boolean(fundingClosed),
+        };
+      } catch (e) {
+        this.logger.warn(`Could not fetch funding pool data for idea ${ideaId}`);
+      }
+
+      // Get idea token details
+      interface TokenData {
+        name: string;
+        symbol: string;
+        totalSupply: number;
+      }
+      let tokenData: TokenData | null = null;
+      try {
+        const [name, symbol, totalSupply] = await Promise.all([
+          this.contractService.readContract(ideaToken as `0x${string}`, [{
+            name: 'name',
+            outputs: [{ type: 'string' }],
+            stateMutability: 'view',
+            type: 'function',
+          }], 'name', []),
+          this.contractService.readContract(ideaToken as `0x${string}`, [{
+            name: 'symbol',
+            outputs: [{ type: 'string' }],
+            stateMutability: 'view',
+            type: 'function',
+          }], 'symbol', []),
+          this.contractService.readContract(ideaToken as `0x${string}`, [{
+            name: 'totalSupply',
+            outputs: [{ type: 'uint256' }],
+            stateMutability: 'view',
+            type: 'function',
+          }], 'totalSupply', []),
+        ]);
+
+        tokenData = {
+          name: String(name),
+          symbol: String(symbol),
+          totalSupply: Number(totalSupply),
+        };
+      } catch (e) {
+        this.logger.warn(`Could not fetch token data for idea ${ideaId}`);
+      }
+
+      return {
+        ideaId: Number(ideaId),
+        creator,
+        status: Number(status),
+        statusText: this.getStatusText(Number(status)),
+        aiScore: Number(aiScore),
+        approvalReasonHash,
+        metadata,
+        fundingPool: {
+          address: fundingPool,
+          softCap: fundingPoolData?.softCap ?? 0,
+          hardCap: fundingPoolData?.hardCap ?? 0,
+          raisedAmount: fundingPoolData?.raisedAmount ?? 0,
+          competitionPrizeBps: fundingPoolData?.competitionPrizeBps ?? 0,
+          builderAssigned: fundingPoolData?.builderAssigned ?? false,
+          fundingClosed: fundingPoolData?.fundingClosed ?? false,
+        },
+        ideaToken: {
+          address: ideaToken,
+          name: tokenData?.name ?? '',
+          symbol: tokenData?.symbol ?? '',
+          totalSupply: tokenData?.totalSupply ?? 0,
+        },
+        createdAt: null,
+      };
+    } catch (error: any) {
+      this.logger.error(`Failed to get idea details ${ideaId}:`, error.message);
+      throw error;
+    }
+  }
+
+  private getStatusText(status: number): string {
+    const statuses = ['PENDING', 'APPROVED', 'ACTIVE', 'COMPLETED', 'REJECTED', 'CANCELLED'];
+    return statuses[status] || 'UNKNOWN';
+  }
+
+  /**
    * List all ideas
    */
   async listIdeas(limit: number = 10) {

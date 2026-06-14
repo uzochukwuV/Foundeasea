@@ -70,6 +70,117 @@ export class OnboardingService implements OnModuleInit {
 
     this.logger.log(`Creating demo idea: "${demoIdea.title}"`);
 
+    // Step 0: Ensure AI agent has USDY and approved IdeaFactory
+    this.logger.log('Step 0: Ensuring AI agent has USDY and approval...');
+    try {
+      const usdyAddress = this.contractService.getUSDYAddress();
+      const aiAgentAddress = this.contractService.getAIAgentAddress();
+      const publicClient = this.contractService.getPublicClient();
+      
+      // Check USDY balance
+      const balance = await this.contractService.readContract(
+        usdyAddress as `0x${string}`,
+        [{ "type": "function", "name": "balanceOf", "inputs": [{ "name": "account", "type": "address" }], "outputs": [{ "type": "uint256" }], "stateMutability": "view" }],
+        'balanceOf',
+        [aiAgentAddress as `0x${string}`]
+      );
+      const balanceFormatted = Number(balance) / 1e6;
+      this.logger.log(`  AI Agent USDY balance: ${balanceFormatted}`);
+      
+      // Mint if needed
+      if (balance < BigInt(500_000_000)) {
+        this.logger.log('  Minting 500,000 USDY to AI agent...');
+        const mintTx = await this.contractService.mintUSDY(
+          aiAgentAddress as `0x${string}`,
+          BigInt(500_000_000_000)
+        );
+        const mintReceipt = await publicClient.waitForTransactionReceipt({ hash: mintTx });
+        this.logger.log(`  ✓ Minted USDY, tx: ${mintTx}, confirmed in block ${mintReceipt.blockNumber}`);
+      }
+
+      // Check and set approval for IdeaFactory
+      const factoryAddress = this.contractService.getIdeaFactoryAddress();
+      const allowance = await this.contractService.readContract(
+        usdyAddress as `0x${string}`,
+        [{ "type": "function", "name": "allowance", "inputs": [{ "name": "owner", "type": "address" }, { "name": "spender", "type": "address" }], "outputs": [{ "type": "uint256" }], "stateMutability": "view" }],
+        'allowance',
+        [aiAgentAddress as `0x${string}`, factoryAddress as `0x${string}`]
+      );
+      this.logger.log(`  Current USDY allowance for IdeaFactory: ${Number(allowance) / 1e6}`);
+      
+      if (allowance < BigInt(500_000_000)) {
+        this.logger.log('  Approving IdeaFactory to spend USDY...');
+        const approveTx = await this.contractService.approveUSDYForFactory(BigInt(1_000_000_000_000));
+        const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        this.logger.log(`  ✓ Approval granted, tx: ${approveTx}, confirmed in block ${approveReceipt.blockNumber}`);
+      } else {
+        this.logger.log('  IdeaFactory already approved');
+      }
+    } catch (error: any) {
+      this.logger.warn('  ⚠️ Error in USDY setup:', error.message);
+    }
+
+    // Step 0b: Configure IdeaFactory if needed
+    this.logger.log('Step 0b: Configuring IdeaFactory...');
+    try {
+      const fundingPoolFactory = this.contractService.getFundingPoolFactory();
+      const ideaTokenFactory = this.contractService.getIdeaTokenFactory();
+      const factoryAddress = this.contractService.getIdeaFactoryAddress();
+      
+      // Check if factories are set
+      const currentFundingPoolFactory = await this.contractService.readContract(
+        factoryAddress as `0x${string}`,
+        [{ "type": "function", "name": "fundingPoolFactory", "inputs": [], "outputs": [{ "type": "address" }], "stateMutability": "view" }],
+        'fundingPoolFactory',
+        []
+      );
+
+      const currentIdeaTokenFactory = await this.contractService.readContract(
+        factoryAddress as `0x${string}`,
+        [{ "type": "function", "name": "ideaTokenFactory", "inputs": [], "outputs": [{ "type": "address" }], "stateMutability": "view" }],
+        'ideaTokenFactory',
+        []
+      );
+      
+      this.logger.log(`  Current factories - FundingPoolFactory: ${currentFundingPoolFactory}, IdeaTokenFactory: ${currentIdeaTokenFactory}`);
+      
+      // Check if IdeaTokenFactory is zero (empty or 0x00...00)
+      const isIdeaTokenFactoryUnset = currentIdeaTokenFactory === '0x0000000000000000000000000000000000000000' || currentIdeaTokenFactory === '0x';
+      const isFundingPoolFactoryUnset = currentFundingPoolFactory === '0x0000000000000000000000000000000000000000' || currentFundingPoolFactory === '0x';
+      
+      if (isIdeaTokenFactoryUnset || isFundingPoolFactoryUnset) {
+        this.logger.log('  Factories not fully configured, resetting...');
+        const setFactoriesTx = await this.contractService.setFactories(
+          fundingPoolFactory.address as `0x${string}`,
+          ideaTokenFactory.address as `0x${string}`
+        );
+        const receipt = await this.contractService.getPublicClient().waitForTransactionReceipt({ hash: setFactoriesTx });
+        this.logger.log(`  ✓ Factories configured, tx: ${setFactoriesTx}, confirmed in block ${receipt.blockNumber}`);
+      } else {
+        this.logger.log(`  All factories properly configured`);
+      }
+
+      // Check and set treasury
+      const currentTreasury = await this.contractService.readContract(
+        factoryAddress as `0x${string}`,
+        [{ "type": "function", "name": "treasury", "inputs": [], "outputs": [{ "type": "address" }], "stateMutability": "view" }],
+        'treasury',
+        []
+      );
+      
+      if (currentTreasury === '0x0000000000000000000000000000000000000000') {
+        this.logger.log('  Treasury not configured, setting it now...');
+        const treasuryAddress = this.contractService.getAIAgentAddress();
+        const setTreasuryTx = await this.contractService.setTreasury(treasuryAddress as `0x${string}`);
+        const treasuryReceipt = await this.contractService.getPublicClient().waitForTransactionReceipt({ hash: setTreasuryTx });
+        this.logger.log(`  ✓ Treasury configured, tx: ${setTreasuryTx}, confirmed in block ${treasuryReceipt.blockNumber}`);
+      } else {
+        this.logger.log(`  Treasury already configured: ${currentTreasury}`);
+      }
+    } catch (error: any) {
+      this.logger.warn('  ⚠️ Error configuring IdeaFactory:', error.message);
+    }
+
     // Step 1: Create idea on-chain
     this.logger.log('Step 1: Creating idea on IdeaFactory...');
     let ideaId: bigint;

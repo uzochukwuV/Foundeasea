@@ -28,10 +28,15 @@ gas_price = 10000000
 rpc_url = "https://testnet.rpc.robinhood.com"
 chain_id = 1300
 
+[profile.rhc_mainnet]
+rpc_url = "https://rpc.robinhood.com"
+chain_id = 13600
+
 [rpc_endpoints]
 mantleSepolia = "https://rpc.sepolia.mantle.xyz"
 baseSepolia = "https://sepolia.base.org"
 rhcTestnet = "https://testnet.rpc.robinhood.com"
+rhcMainnet = "https://rpc.robinhood.com"
 
 [etherscan]
 mantleSepolia = { key = "${MANTLE_API_KEY}" }

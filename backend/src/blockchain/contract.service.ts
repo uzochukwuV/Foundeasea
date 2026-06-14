@@ -7,6 +7,7 @@ import {
   encodeFunctionData,
   type TransactionSerializable,
   type HDAccount,
+  decodeEventLog,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -137,8 +138,9 @@ export class ContractService implements OnModuleInit {
         args,
       });
 
-      // Get nonce
+      // Get current nonce and increment for next transaction
       const nonce = await this.publicClient.getTransactionCount({ address: this.aiAgentAccount.address });
+      this.logger.log(`  [Nonce: ${nonce}] Calling ${functionName}...`);
 
       // Get gas price
       const gasPrice = await this.publicClient.getGasPrice();
@@ -165,17 +167,49 @@ export class ContractService implements OnModuleInit {
         gasPrice,
         nonce,
         chainId: this.chain.id,
-        value: BigInt(0), // No native token value needed for this call
+        value: BigInt(0),
       };
 
       // Sign and send
       const signedTx = await this.aiAgentAccount.signTransaction(tx);
       const hash = await this.publicClient.sendRawTransaction({ serializedTransaction: signedTx });
       
-      this.logger.log(`Transaction sent: ${hash}`);
+      this.logger.log(`  Transaction sent: ${hash} (nonce: ${nonce})`);
       return hash;
     } catch (error: any) {
-      this.logger.error(`Failed to write contract:`, error.message);
+      this.logger.error(`Failed to write contract: ${error.message}`);
+      
+      // Try to decode revert reason from error
+      const errorMessage = error.message || '';
+      
+      // Check for common error patterns
+      if (errorMessage.includes('execution reverted')) {
+        // Try to extract revert data
+        const revertMatch = errorMessage.match(/0x[a-fA-F0-9]+/);
+        if (revertMatch) {
+          const revertData = revertMatch[0];
+          this.logger.error(`   Revert data: ${revertData}`);
+          
+          // Try to decode common errors
+          if (revertData === '0x') {
+            this.logger.error('   Empty revert - contract validation failed');
+          }
+        }
+        
+        // Check for specific require messages in the error
+        if (errorMessage.includes('Invalid caps')) {
+          this.logger.error('   Reason: Invalid caps - softCap must be <= hardCap');
+        } else if (errorMessage.includes('Invalid target')) {
+          this.logger.error('   Reason: Invalid target - targetRaise must be >= softCap');
+        } else if (errorMessage.includes('Invalid builder')) {
+          this.logger.error('   Reason: Invalid builder allocation - must be 1000-30000 bps');
+        } else if (errorMessage.includes('Invalid competition')) {
+          this.logger.error('   Reason: Invalid competition prize - must be <= 5000 bps');
+        } else if (errorMessage.includes('Invalid gate')) {
+          this.logger.error('   Reason: Invalid gate type');
+        }
+      }
+      
       throw error;
     }
   }
@@ -272,5 +306,77 @@ export class ContractService implements OnModuleInit {
     const address = this.configService.get('USDY_MANTLE');
     if (!address) throw new Error('USDY_MANTLE not configured');
     return address;
+  }
+
+  getUSDYAbi(): any {
+    // Minimal ABI for USDY mint and approve functions
+    return [
+      {
+        "type": "function",
+        "name": "mint",
+        "inputs": [
+          { "name": "to", "type": "address" },
+          { "name": "amount", "type": "uint256" }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+      },
+      {
+        "type": "function",
+        "name": "approve",
+        "inputs": [
+          { "name": "spender", "type": "address" },
+          { "name": "amount", "type": "uint256" }
+        ],
+        "outputs": [{ "type": "bool" }],
+        "stateMutability": "nonpayable"
+      }
+    ] as any;
+  }
+
+  /**
+   * Mint USDY tokens to an address
+   * Only works if the caller (AI agent) is the minter of the USDY contract
+   */
+  async mintUSDY(to: `0x${string}`, amount: bigint): Promise<string> {
+    const usdyAddress = this.getUSDYAddress();
+    const usdyAbi = this.getUSDYAbi();
+    
+    this.logger.log(`Minting ${amount} USDY to ${to}`);
+    return await this.writeContract(usdyAddress, usdyAbi, 'mint', [to, amount]);
+  }
+
+  /**
+   * Approve IdeaFactory to spend USDY
+   */
+  async approveUSDYForFactory(amount: bigint): Promise<string> {
+    const usdyAddress = this.getUSDYAddress();
+    const factoryAddress = this.getIdeaFactoryAddress();
+    const usdyAbi = this.getUSDYAbi();
+    
+    this.logger.log(`Approving IdeaFactory (${factoryAddress}) to spend ${amount} USDY`);
+    return await this.writeContract(usdyAddress, usdyAbi, 'approve', [factoryAddress, amount]);
+  }
+
+  /**
+   * Set factories on IdeaFactory contract
+   */
+  async setFactories(fundingPoolFactory: `0x${string}`, ideaTokenFactory: `0x${string}`): Promise<string> {
+    const factoryAddress = this.getIdeaFactoryAddress();
+    const abi = this.getIdeaFactoryAbi();
+    
+    this.logger.log(`Setting factories - FundingPoolFactory: ${fundingPoolFactory}, IdeaTokenFactory: ${ideaTokenFactory}`);
+    return await this.writeContract(factoryAddress, abi, 'setFactories', [fundingPoolFactory, ideaTokenFactory]);
+  }
+
+  /**
+   * Set treasury on IdeaFactory contract
+   */
+  async setTreasury(treasury: `0x${string}`): Promise<string> {
+    const factoryAddress = this.getIdeaFactoryAddress();
+    const abi = this.getIdeaFactoryAbi();
+    
+    this.logger.log(`Setting treasury: ${treasury}`);
+    return await this.writeContract(factoryAddress, abi, 'setTreasury', [treasury]);
   }
 }

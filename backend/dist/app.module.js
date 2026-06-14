@@ -12,6 +12,7 @@ const config_1 = require("@nestjs/config");
 const blockchain_module_1 = require("./blockchain/blockchain.module");
 const agents_module_1 = require("./agents/agents.module");
 const ideas_module_1 = require("./ideas/ideas.module");
+const onboarding_module_1 = require("./onboarding/onboarding.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -26,6 +27,7 @@ exports.AppModule = AppModule = __decorate([
             blockchain_module_1.BlockchainModule,
             agents_module_1.AgentsModule,
             ideas_module_1.IdeasModule,
+            onboarding_module_1.OnboardingModule,
         ],
     })
 ], AppModule);

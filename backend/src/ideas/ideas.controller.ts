@@ -151,7 +151,7 @@ export class IdeasController {
     this.logger.log(`[GET /ideas/:ideaId] Fetching idea: ${ideaId}`);
 
     try {
-      const idea = await this.ideaService.getIdea(BigInt(ideaId));
+      const idea = await this.ideaService.getIdeaDetails(BigInt(ideaId));
       return {
         success: true,
         data: idea,
