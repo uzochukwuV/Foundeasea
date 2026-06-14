@@ -43,6 +43,7 @@ export const ChevronRight = (props: IconProps) => <IconGlyph {...props}><path d=
 export const Menu = (props: IconProps) => <IconGlyph {...props}><path d="M4 12h16" /><path d="M4 6h16" /><path d="M4 18h16" /></IconGlyph>;
 export const Bot = (props: IconProps) => <IconGlyph {...props}><rect width="18" height="11" x="3" y="11" rx="2" /><circle cx="12" cy="5" r="2" /><path d="M12 7v2" /><path d="M8 16a4 4 0 1 1 8 0" /></IconGlyph>;
 export const ShoppingBag = (props: IconProps) => <IconGlyph {...props}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></IconGlyph>;
-export const Globe = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><path d="M12 3a14.5 14.5 0 0 0 0 18" /><path d="M3 12h18" /></IconGlyph>;
 export const Zap = (props: IconProps) => <IconGlyph {...props}><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /></IconGlyph>;
 export const Compass = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></IconGlyph>;
+export const ChevronDown = (props: IconProps) => <IconGlyph {...props}><path d="m6 9 6 6 6-6" /></IconGlyph>;
+export const Globe = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><path d="M12 3a14.5 14.5 0 0 0 0 18" /><path d="M3 12h18" /></IconGlyph>;

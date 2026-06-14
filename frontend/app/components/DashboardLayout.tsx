@@ -11,9 +11,12 @@ import {
   ShoppingCart,
   Menu,
   X,
-  Wallet
+  Wallet,
+  ChevronDown,
+  Globe
 } from "./icons";
 import { useState } from "react";
+import { NETWORKS, DEFAULT_CHAIN } from "../lib/networks";
 
 const navItems = [
   { href: "/discover", label: "Discover", icon: Compass, description: "Browse ideas" },
@@ -26,6 +29,15 @@ const navItems = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [networkOpen, setNetworkOpen] = useState(false);
+  const [selectedChain, setSelectedChain] = useState(DEFAULT_CHAIN);
+
+  const currentNetwork = NETWORKS[selectedChain];
+
+  const handleNetworkSelect = (chainId: string) => {
+    setSelectedChain(chainId);
+    setNetworkOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
@@ -69,10 +81,47 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-outfit text-[18px] font-semibold tracking-tight">FounderSea</span>
           </div>
 
-          {/* Network Status */}
-          <div className="mx-4 mt-4 flex items-center gap-2 border border-white/10 bg-[#050505] px-4 py-2.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-mono text-xs text-zinc-500">Mantle Sepolia</span>
+          {/* Network Selector */}
+          <div className="mx-4 mt-4 relative">
+            <button
+              onClick={() => setNetworkOpen(!networkOpen)}
+              className="flex w-full items-center justify-between border border-white/10 bg-[#050505] px-4 py-3 transition-all hover:border-white/30"
+            >
+              <div className="flex items-center gap-3">
+                <div 
+                  className="h-3 w-3 rounded-full animate-pulse" 
+                  style={{ backgroundColor: currentNetwork.color }}
+                />
+                <span className="font-mono text-xs">{currentNetwork.shortName}</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${networkOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {networkOpen && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 border border-white/10 bg-[#0a0a0a]">
+                {Object.entries(NETWORKS).map(([id, network]) => (
+                  <button
+                    key={id}
+                    onClick={() => handleNetworkSelect(id)}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/5 ${
+                      selectedChain === id ? 'bg-[#0052FF]/10' : ''
+                    }`}
+                  >
+                    <div 
+                      className="h-3 w-3 rounded-full" 
+                      style={{ backgroundColor: network.color }}
+                    />
+                    <div className="flex-1">
+                      <div className="font-mono text-xs text-white">{network.name}</div>
+                      <div className="text-[10px] text-zinc-500">Chain ID: {network.chainId}</div>
+                    </div>
+                    {selectedChain === id && (
+                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
@@ -109,6 +158,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               })}
             </div>
           </nav>
+
+          {/* Network Info */}
+          <div className="mx-4 mb-4 border border-white/10 bg-[#050505] p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <Globe className="w-4 h-4 text-[#0052FF]" />
+              <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Network</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <a 
+                href={currentNetwork.blockExplorer} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-mono text-xs text-white hover:text-[#0052FF] transition-colors"
+              >
+                {currentNetwork.name}
+              </a>
+            </div>
+            <div className="mt-1 font-mono text-[10px] text-zinc-500">
+              Explorer: <a href={currentNetwork.blockExplorer} className="text-[#0052FF] hover:underline">{currentNetwork.blockExplorer.replace('https://', '')}</a>
+            </div>
+          </div>
 
           {/* Wallet Connect */}
           <div className="border-t border-white/5 p-4">
