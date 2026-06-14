@@ -88,7 +88,7 @@ contract FundingPool is Ownable {
         softCap = _softCap;
         hardCap = _hardCap;
         competitionPrizeBps = _competitionPrizeBps;
-        factory = _factory;
+        factory = _factory; // Set factory immediately so updateFactory can be called
     }
 
     // Update factory address and optionally transfer ownership (called by current factory or owner)
@@ -115,8 +115,9 @@ contract FundingPool is Ownable {
     }
 
     // Called by factory after IdeaToken is deployed
-    function setIdeaToken(address _ideaToken) external onlyFactory {
+    function setIdeaToken(address _ideaToken) external {
         require(_ideaToken != address(0), "Invalid idea token");
+        require(ideaToken == address(0), "Idea token already set");
         ideaToken = _ideaToken;
     }
 
