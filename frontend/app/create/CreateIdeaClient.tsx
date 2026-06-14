@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BrowserProvider, Contract } from "ethers";
+import { BrowserProvider, Contract, InterfaceAbi } from "ethers";
 import { Brain, CheckCircle, Coins, ShieldCheck } from "../components/icons";
 import { DisabledTxButton, MiniBars, PageIntro, StatCard, StatusChip, money } from "../components/uiBits";
 
@@ -13,8 +13,8 @@ type FactoryConfig = {
   usdy: string;
   creatorDepositUsdy: number;
   creatorDepositBaseUnits: string;
-  ideaFactoryAbi: unknown[];
-  usdyAbi: unknown[];
+  ideaFactoryAbi: InterfaceAbi;
+  usdyAbi: InterfaceAbi;
 };
 
 type ValidationResult = {

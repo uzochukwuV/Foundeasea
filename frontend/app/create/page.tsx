@@ -1,21 +1,24 @@
 import { AppShell } from "../components/AppShell";
 import { serverApi } from "../lib/api";
 import { CreateIdeaClient } from "./CreateIdeaClient";
+import type { InterfaceAbi } from "ethers";
+import { IDEA_FACTORY_ABI, ERC20_ABI } from "../lib/contracts/abis";
 
 export const dynamic = "force-dynamic";
 
 export default async function CreateIdeaPage() {
-  const factory = await serverApi<{
-    chainId: number;
-    chainHex: string;
-    chainName: string;
-    ideaFactory: string;
-    usdy: string;
-    creatorDepositUsdy: number;
-    creatorDepositBaseUnits: string;
-    ideaFactoryAbi: unknown[];
-    usdyAbi: unknown[];
-  }>("/api/contracts/idea-factory");
+  // Use our pre-defined ABIs for type safety
+  const factory = {
+    chainId: 5003,
+    chainHex: "0x138b",
+    chainName: "Mantle Sepolia",
+    ideaFactory: process.env.NEXT_PUBLIC_IDEA_FACTORY || "",
+    usdy: process.env.NEXT_PUBLIC_USDY || "",
+    creatorDepositUsdy: 500,
+    creatorDepositBaseUnits: "500000000",
+    ideaFactoryAbi: IDEA_FACTORY_ABI as InterfaceAbi,
+    usdyAbi: ERC20_ABI as InterfaceAbi,
+  };
 
   return (
     <AppShell>
