@@ -69,34 +69,73 @@ export class IdeaService {
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       this.logger.log(`  Transaction confirmed: ${receipt.blockNumber}`);
+      this.logger.log(`  Logs count: ${receipt.logs?.length || 0}`);
 
-      // Parse logs using publicClient's decoding or fallback to scanning logs for known topics
-      let ideaCreatedEvent: any = null;
+      // Parse logs using viem's decodeEventLog
+      let ideaId: bigint | null = null;
+      let fundingPoolAddress: string | null = null;
+      let ideaTokenAddress: string | null = null;
+
       try {
-        // viem's public client can decode logs given the ABI; try to decode
         const logs = receipt.logs || [];
-        for (const log of logs) {
+        this.logger.log(`  Parsing ${logs.length} logs...`);
+        
+        for (let i = 0; i < logs.length; i++) {
+          const log = logs[i];
+          this.logger.log(`  Log ${i}: topics=${JSON.stringify(log.topics?.slice(0, 2))}, data length=${log.data?.length}`);
+          
           try {
-            const parsed = this.contractService.getPublicClient().decodeEventLog({ abi: ideaFactoryAbi as any, data: log.data, topics: log.topics });
-            if (parsed && parsed.name === 'IdeaCreated') {
-              ideaCreatedEvent = { args: parsed.args };
+            // Get the event signature from first topic
+            const topic0 = log.topics?.[0];
+            
+            // Try to decode using the ABI
+            const parsed = this.contractService.getPublicClient().decodeEventLog({
+              abi: ideaFactoryAbi as any,
+              data: log.data,
+              topics: log.topics,
+            });
+            
+            this.logger.log(`  Log ${i} decoded: eventName=${parsed?.eventName}, args=${JSON.stringify(parsed?.args)}`);
+            
+            if (parsed && parsed.eventName === 'IdeaCreated') {
+              ideaId = parsed.args.ideaId;
+              fundingPoolAddress = parsed.args.fundingPool;
+              ideaTokenAddress = parsed.args.ideaToken;
+              this.logger.log(`  ✓ Found IdeaCreated event!`);
               break;
             }
-          } catch {
-            // ignore decode errors per-log
+          } catch (decodeErr: any) {
+            this.logger.log(`  Log ${i} decode failed: ${decodeErr.message.substring(0, 100)}`);
           }
         }
-      } catch {
-        ideaCreatedEvent = null;
+      } catch (err: any) {
+        this.logger.error(`  Failed to parse logs: ${err.message}`);
       }
 
-      if (!ideaCreatedEvent) {
-        throw new Error('IdeaCreated event not found in transaction receipt');
+      // If we couldn't parse, try to extract ideaId from contract (alternative method)
+      if (!ideaId) {
+        this.logger.warn(`  Could not parse IdeaCreated event, trying alternative method...`);
+        
+        // Read nextIdeaId which should be the ID of the newly created idea
+        const ideaFactoryAddress = this.contractService.getIdeaFactoryAddress();
+        const abi = Array.isArray(ideaFactoryAbi) ? ideaFactoryAbi : JSON.parse(ideaFactoryAbi);
+        const nextIdeaId = await this.contractService.readContract(ideaFactoryAddress, abi, 'nextIdeaId', []);
+        
+        // If nextIdeaId is 0, there are no ideas
+        if (nextIdeaId === 0n) {
+          throw new Error('No ideas found after creation');
+        }
+        
+        ideaId = nextIdeaId - BigInt(1); // Last created idea
+        this.logger.log(`  Got nextIdeaId=${nextIdeaId}, using ideaId=${ideaId}`);
+        
+        // Get idea details to find funding pool and token
+        const idea = await this.contractService.readContract(ideaFactoryAddress, abi, 'getIdea', [ideaId]);
+        fundingPoolAddress = idea[2];
+        ideaTokenAddress = idea[1];
+        
+        this.logger.log(`  ✓ Got idea data from contract: ideaId=${ideaId}`);
       }
-
-      const ideaId = ideaCreatedEvent.args.ideaId;
-      const fundingPoolAddress = ideaCreatedEvent.args.fundingPool;
-      const ideaTokenAddress = ideaCreatedEvent.args.ideaToken;
 
       this.logger.log(`✓ Idea created: ideaId=${ideaId}`);
       this.logger.log(`  fundingPool: ${fundingPoolAddress}`);

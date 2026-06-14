@@ -105,7 +105,7 @@ export class IdeasController {
       }
 
       // 3. ONE-TIME: Setup DAOVoting after first idea
-      if (ideaId === 1n) {
+      if (ideaId === 1n && ideaTokenAddress) {
         try {
           await this.ideaService.setupDAOVotingOnce(ideaTokenAddress);
           this.logger.log(`✓ DAOVoting setup complete (one-time)`);

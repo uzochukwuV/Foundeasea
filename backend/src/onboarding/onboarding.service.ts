@@ -83,13 +83,24 @@ export class OnboardingService implements OnModuleInit {
       ideaId = result.ideaId;
       this.logger.log(`✓ Idea created with ID: ${ideaId}`);
     } catch (error: any) {
-      if (error.message.includes('403') || error.message.includes('not whitelisted') || error.message.includes('eth_sendTransaction')) {
-        this.logger.warn('⚠️ RPC does not support write transactions. Skipping onchain creation.');
-        this.logger.log('💡 To enable write operations, configure a private RPC URL (e.g., Alchemy, Infura)');
-        this.logger.log('   Or use the frontend at http://localhost:3001 to create ideas.');
-        return; // Exit gracefully
+      const errorMsg = error.message || '';
+      
+      if (errorMsg.includes('No ideas found after creation') || 
+          errorMsg.includes('execution reverted') ||
+          errorMsg.includes('transferFrom')) {
+        // Check if it's a USDY deposit issue
+        if (errorMsg.includes('transferFrom') || errorMsg.includes('insufficient')) {
+          this.logger.warn('⚠️ USDY deposit required but agent may not have sufficient balance or approval.');
+          this.logger.log('💡 To seed ideas, ensure the AI agent wallet has USDY tokens and has approved IdeaFactory.');
+        } else {
+          this.logger.warn('⚠️ Idea creation transaction may have failed or returned no logs.');
+          this.logger.log('💡 Check transaction on explorer or ensure contract setup is complete.');
+        }
+        this.logger.log('💡 Backend is running. Use frontend to create ideas via user wallet.');
+      } else {
+        this.logger.warn('⚠️ Could not seed demo idea:', error.message);
       }
-      throw error;
+      return;
     }
 
     // Step 2: Setup new idea (FundingPool.setAiAgent + registerBuilderAgreement)

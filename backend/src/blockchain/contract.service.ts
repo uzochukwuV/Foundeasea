@@ -2,20 +2,23 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   createPublicClient,
-  createWalletClient,
-  getContract,
   http,
   Chain,
+  encodeFunctionData,
+  type TransactionSerializable,
+  type HDAccount,
 } from 'viem';
-// Mantle Sepolia Testnet — chain ID 5003 (not in viem/chains, defined manually)
+import { privateKeyToAccount } from 'viem/accounts';
+
+// Mantle Sepolia Testnet — chain ID 5003
 const mantleSepolia: Chain = {
   id: 5003,
   name: 'Mantle Sepolia',
   network: 'mantle-sepolia',
   nativeCurrency: { name: 'MNT', symbol: 'MNT', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://rpc.sepolia.mantle.xyz'] },
-    public:  { http: ['https://rpc.sepolia.mantle.xyz'] },
+    default: { http: ['https://mantle-sepolia.g.alchemy.com/v2/gBLyY4xTb-MP1ZkxdnJdTqkYKQjxi_XO'] },
+    public:  { http: ['https://mantle-sepolia.g.alchemy.com/v2/gBLyY4xTb-MP1ZkxdnJdTqkYKQjxi_XO'] },
   },
   blockExplorers: {
     default: { name: 'Mantlescan', url: 'https://sepolia.mantlescan.xyz' },
@@ -38,8 +41,9 @@ import {
 export class ContractService implements OnModuleInit {
   private logger = new Logger('ContractService');
   private publicClient: any;
-  private aiAgentWallet: any;
+  private aiAgentAccount: HDAccount | null = null;
   private chain: Chain;
+  private rpcUrl: string = '';
 
   constructor(private configService: ConfigService) {
     this.chain = mantleSepolia;
@@ -51,29 +55,26 @@ export class ContractService implements OnModuleInit {
   }
 
   private initializeClients() {
-    const rpcUrl =
-      this.configService.get('RPC_URL') ||
+    this.rpcUrl =
       this.configService.get('MANTLE_SEPOLIA_RPC') ||
-      'https://rpc.sepolia.mantle.xyz';
+      this.configService.get('RPC_URL') ||
+      'https://mantle-sepolia.g.alchemy.com/v2/gBLyY4xTb-MP1ZkxdnJdTqkYKQjxi_XO';
 
     // Public client for read operations
     this.publicClient = createPublicClient({
       chain: this.chain,
-      transport: http(rpcUrl),
+      transport: http(this.rpcUrl),
     });
 
-    // Wallet client for AI agent write operations
+    // Account for AI agent write operations
     const aiAgentPrivateKey = this.configService.get('AI_AGENT_PRIVATE_KEY');
     if (!aiAgentPrivateKey || aiAgentPrivateKey === '0x_your_private_key_here') {
       this.logger.warn('AI_AGENT_PRIVATE_KEY not configured or invalid - write operations disabled');
       return;
     }
 
-    this.aiAgentWallet = createWalletClient({
-      chain: this.chain,
-      transport: http(rpcUrl),
-      account: aiAgentPrivateKey as `0x${string}`,
-    });
+    this.aiAgentAccount = privateKeyToAccount(aiAgentPrivateKey as `0x${string}`) as unknown as HDAccount;
+    this.logger.log(`AI Agent wallet initialized: ${this.aiAgentAccount.address}`);
   }
 
   getPublicClient() {
@@ -81,7 +82,11 @@ export class ContractService implements OnModuleInit {
   }
 
   getAIAgentWallet() {
-    return this.aiAgentWallet;
+    // Return a mock wallet object for compatibility
+    return {
+      account: this.aiAgentAccount,
+      address: this.aiAgentAccount?.address,
+    };
   }
 
   getChain() {
@@ -119,21 +124,56 @@ export class ContractService implements OnModuleInit {
     return await this.publicClient.readContract({ address, abi, functionName, args });
   }
 
-  /** Generic write wrapper using wallet client writeContract - with proper signing */
+  /** Generic write wrapper using local account signing - sends raw transaction */
   async writeContract(address: `0x${string}`, abi: any, functionName: string, args: any[] = []) {
-    if (!this.aiAgentWallet) {
+    if (!this.aiAgentAccount) {
       throw new Error('AI Agent wallet not initialized - write operations are disabled');
     }
     try {
-      // writeContract with wallet client handles local signing and sends raw transaction
-      return await this.aiAgentWallet.writeContract({
-        address,
+      // Encode function data
+      const data = encodeFunctionData({
         abi,
         functionName,
         args,
-        // Add gas estimation for safety
-        gas: BigInt(3000000),
       });
+
+      // Get nonce
+      const nonce = await this.publicClient.getTransactionCount({ address: this.aiAgentAccount.address });
+
+      // Get gas price
+      const gasPrice = await this.publicClient.getGasPrice();
+
+      // Estimate gas
+      let gas: bigint;
+      try {
+        const gasEstimate = await this.publicClient.estimateGas({
+          account: this.aiAgentAccount.address,
+          to: address,
+          data,
+        });
+        gas = gasEstimate * BigInt(12) / BigInt(10); // 20% buffer
+      } catch (gasError: any) {
+        this.logger.warn('Gas estimation failed, using default:', gasError.message);
+        gas = BigInt(2000000); // Default 2M gas
+      }
+
+      // Build transaction
+      const tx: TransactionSerializable = {
+        to: address,
+        data,
+        gas,
+        gasPrice,
+        nonce,
+        chainId: this.chain.id,
+        value: BigInt(0), // No native token value needed for this call
+      };
+
+      // Sign and send
+      const signedTx = await this.aiAgentAccount.signTransaction(tx);
+      const hash = await this.publicClient.sendRawTransaction({ serializedTransaction: signedTx });
+      
+      this.logger.log(`Transaction sent: ${hash}`);
+      return hash;
     } catch (error: any) {
       this.logger.error(`Failed to write contract:`, error.message);
       throw error;
