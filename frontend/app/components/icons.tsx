@@ -18,11 +18,14 @@ export const CheckCircle = (props: IconProps) => <IconGlyph {...props}><circle c
 export const Clock = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></IconGlyph>;
 export const Coins = (props: IconProps) => <IconGlyph {...props}><ellipse cx="12" cy="6" rx="7" ry="3" /><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" /><path d="M5 12v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4" /></IconGlyph>;
 export const DownloadSimple = (props: IconProps) => <IconGlyph {...props}><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></IconGlyph>;
+export const FileText = (props: IconProps) => <IconGlyph {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" /></IconGlyph>;
 export const Funnel = (props: IconProps) => <IconGlyph {...props}><path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z" /></IconGlyph>;
 export const Gauge = (props: IconProps) => <IconGlyph {...props}><path d="M5 19a9 9 0 1 1 14 0" /><path d="m12 13 4-4" /></IconGlyph>;
 export const GitBranch = (props: IconProps) => <IconGlyph {...props}><circle cx="6" cy="5" r="2" /><circle cx="18" cy="19" r="2" /><circle cx="6" cy="19" r="2" /><path d="M6 7v10" /><path d="M8 19h6a4 4 0 0 0 4-4V7" /></IconGlyph>;
 export const GraduationCap = (props: IconProps) => <IconGlyph {...props}><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></IconGlyph>;
 export const Lightning = (props: IconProps) => <IconGlyph {...props}><path d="M13 2 4 14h7l-1 8 10-13h-7l0-7Z" /></IconGlyph>;
+export const MapPin = (props: IconProps) => <IconGlyph {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></IconGlyph>;
+export const Calendar = (props: IconProps) => <IconGlyph {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></IconGlyph>;
 export const Loader2 = (props: IconProps) => <IconGlyph {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></IconGlyph>;
 export const Medal = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="14" r="5" /><path d="M9 2h6l2 6-5 2-5-2 2-6Z" /></IconGlyph>;
 export const PlugsConnected = (props: IconProps) => <IconGlyph {...props}><path d="M8 7V3" /><path d="M16 7V3" /><path d="M6 7h12v4a6 6 0 0 1-12 0V7Z" /><path d="M12 17v4" /></IconGlyph>;
@@ -30,6 +33,7 @@ export const Plus = (props: IconProps) => <IconGlyph {...props}><path d="M12 5v1
 export const ShieldCheck = (props: IconProps) => <IconGlyph {...props}><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3Z" /><path d="m8.5 12 2 2 5-5" /></IconGlyph>;
 export const ShoppingCart = (props: IconProps) => <IconGlyph {...props}><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></IconGlyph>;
 export const Sparkle = (props: IconProps) => <IconGlyph {...props}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" /><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z" /></IconGlyph>;
+export const Target = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></IconGlyph>;
 export const TrendUp = (props: IconProps) => <IconGlyph {...props}><path d="M4 17 10 11l4 4 6-8" /><path d="M14 7h6v6" /></IconGlyph>;
 export const Trophy = (props: IconProps) => <IconGlyph {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></IconGlyph>;
 export const Users = (props: IconProps) => <IconGlyph {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></IconGlyph>;

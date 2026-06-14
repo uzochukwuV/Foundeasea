@@ -14,7 +14,8 @@ import {
   Wallet,
   ChevronDown,
   Globe,
-  LogOut
+  LogOut,
+  Lightning
 } from "./icons";
 import { useState } from "react";
 import { NETWORKS, DEFAULT_CHAIN } from "../lib/networks";

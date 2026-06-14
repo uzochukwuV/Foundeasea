@@ -3,15 +3,7 @@
 import { useEffect, useState } from "react";
 import { Alert, CheckCircle, Wallet } from "./icons";
 
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-      on?: (event: string, handler: (...args: unknown[]) => void) => void;
-      removeListener?: (event: string, handler: (...args: unknown[]) => void) => void;
-    };
-  }
-}
+// Window.ethereum type is declared in wallet.tsx
 
 const MANTLE_SEPOLIA_HEX = "0x138b";
 const MANTLE_SEPOLIA_DECIMAL = 5003;
