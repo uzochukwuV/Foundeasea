@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { BrowserProvider, Contract } from "ethers";
 import { 
   Brain, 
@@ -14,7 +14,13 @@ import {
   ArrowRight,
   Loader2,
   AlertCircle,
-  Wallet
+  Wallet,
+  Upload,
+  File,
+  Video,
+  X,
+  Plus,
+  Check
 } from "../components/icons";
 import { IDEA_FACTORY_ABI, MOCK_USDY_ABI } from "../lib/contracts/abis";
 
@@ -25,6 +31,15 @@ const CHAIN_HEX = "0x138b"; // Mantle Sepolia
 const CHAIN_ID = 5003;
 const USDY_DECIMALS = 6;
 const CREATOR_DEPOSIT_USDY = 500;
+
+// File type definitions
+interface UploadedFile {
+  name: string;
+  size: number;
+  type: string;
+  base64: string;
+  preview?: string;
+}
 
 type ValidationResult = {
   validationId: string;
@@ -43,6 +58,13 @@ type ValidationResult = {
     gateType: number;
     gateParams: string;
   };
+  submission?: {
+    metadataHash: string;
+    pitchDeckHash: string;
+    protocolPdfHash: string;
+    additionalDocsHash: string;
+    videoLinks: string[];
+  };
 };
 
 export const CreateIdeaClient = () => {
@@ -59,14 +81,76 @@ export const CreateIdeaClient = () => {
     builderAllocBps: "2000",
     milestones: "Connect Stripe revenue hook\nShip investor revenue dashboard\nLaunch expansion alert engine",
   });
+  
+  // Document upload states
+  const [pitchDeck, setPitchDeck] = useState<UploadedFile | null>(null);
+  const [protocolPdf, setProtocolPdf] = useState<UploadedFile | null>(null);
+  const [additionalDocs, setAdditionalDocs] = useState<UploadedFile | null>(null);
+  const [videoLinks, setVideoLinks] = useState<string[]>([]);
+  const [newVideoLink, setNewVideoLink] = useState("");
+  
   const [wallet, setWallet] = useState("");
   const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [status, setStatus] = useState("Ready: AI validation must approve before onchain creation.");
+  const [status, setStatus] = useState("Ready: Upload your documents and run AI validation.");
   const [txHash, setTxHash] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+
+  // File upload handlers
+  const handleFileUpload = useCallback(async (type: 'pitchDeck' | 'protocolPdf' | 'additionalDocs', event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setStatus("Error: Only PDF files are accepted");
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setStatus("Error: File size must be under 10MB");
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = (e.target?.result as string).split(',')[1];
+      const uploadedFile: UploadedFile = {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        base64,
+      };
+
+      if (type === 'pitchDeck') setPitchDeck(uploadedFile);
+      else if (type === 'protocolPdf') setProtocolPdf(uploadedFile);
+      else if (type === 'additionalDocs') setAdditionalDocs(uploadedFile);
+
+      setStatus(`${file.name} uploaded successfully`);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const removeFile = useCallback((type: 'pitchDeck' | 'protocolPdf' | 'additionalDocs') => {
+    if (type === 'pitchDeck') setPitchDeck(null);
+    else if (type === 'protocolPdf') setProtocolPdf(null);
+    else if (type === 'additionalDocs') setAdditionalDocs(null);
+  }, []);
+
+  const addVideoLink = useCallback(() => {
+    if (newVideoLink && !videoLinks.includes(newVideoLink)) {
+      setVideoLinks([...videoLinks, newVideoLink]);
+      setNewVideoLink("");
+    }
+  }, [newVideoLink, videoLinks]);
+
+  const removeVideoLink = useCallback((link: string) => {
+    setVideoLinks(videoLinks.filter(l => l !== link));
+  }, [videoLinks]);
 
   const connectWallet = async () => {
     if (!window.ethereum) throw new Error("No injected EVM wallet found");
@@ -81,19 +165,25 @@ export const CreateIdeaClient = () => {
 
   const validate = async () => {
     setIsLoading(true);
-    setStatus("Running AI validation via backend...");
+    setStatus("Uploading documents and running AI validation...");
     try {
       const payload = {
         title: form.title,
+        oneLiner: form.oneLiner,
         description: form.description,
         category: form.category,
+        tags: [],
         targetRaise: Number(form.targetRaise),
         softCap: Number(form.softCap),
         hardCap: Number(form.hardCap),
         fundingDays: Number(form.fundingDays),
+        pitchDeckBase64: pitchDeck?.base64,
+        protocolPdfBase64: protocolPdf?.base64,
+        additionalDocsBase64: additionalDocs?.base64,
+        videoLinks: videoLinks,
       };
       
-      const response = await fetch("/api/ideas/validate", {
+      const response = await fetch("/api/ideas/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -101,8 +191,20 @@ export const CreateIdeaClient = () => {
       
       if (!response.ok) throw new Error(await response.text());
       
-      const result: ValidationResult = await response.json();
-      setValidation(result);
+      const result = await response.json();
+      
+      // Map backend response to ValidationResult
+      const mappedResult: ValidationResult = {
+        validationId: result.submissionId,
+        approved: result.approved,
+        score: result.aiScore,
+        summary: result.message,
+        feedback: [result.aiReasoning],
+        contractConfig: result.contractConfig,
+        submission: result.submission,
+      };
+      
+      setValidation(mappedResult);
       setStatus(result.approved 
         ? "AI approved! You can now create the idea onchain." 
         : "AI requires revision. Update the fields and validate again.");
@@ -361,6 +463,182 @@ export const CreateIdeaClient = () => {
                     className="min-h-28 w-full rounded-lg border border-white/10 bg-[#050505] px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-[#0052FF]/50 focus:outline-none resize-none"
                     placeholder="Milestone 1&#10;Milestone 2&#10;Milestone 3"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Document Upload Section */}
+            <div className="rounded-xl border border-white/10 bg-[#0a0a0a] p-6">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
+                  <Upload className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h2 className="font-outfit text-xl font-medium text-white">Submission Documents</h2>
+                  <p className="text-sm text-zinc-500">Upload pitch deck, protocol docs, and videos for comprehensive AI analysis</p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                {/* Pitch Deck Upload */}
+                <div className="rounded-lg border border-dashed border-white/20 bg-[#050505] p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <File className="w-4 h-4 text-[#0052FF]" />
+                      <span className="text-sm font-medium text-white">Pitch Deck (PDF)</span>
+                      <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-400">Required</span>
+                    </div>
+                    {pitchDeck && (
+                      <button onClick={() => removeFile('pitchDeck')} className="text-zinc-500 hover:text-red-400">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  {pitchDeck ? (
+                    <div className="flex items-center gap-3 rounded bg-white/5 p-3">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <div className="flex-1">
+                        <p className="text-sm text-white">{pitchDeck.name}</p>
+                        <p className="text-xs text-zinc-500">{(pitchDeck.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-white/10 bg-[#0a0a0a] py-6 transition-colors hover:bg-white/5">
+                      <Upload className="mb-2 w-6 h-6 text-zinc-500" />
+                      <span className="text-sm text-zinc-400">Click to upload PDF</span>
+                      <span className="text-xs text-zinc-600">Max 10MB</span>
+                      <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload('pitchDeck', e)} />
+                    </label>
+                  )}
+                </div>
+
+                {/* Protocol PDF Upload */}
+                <div className="rounded-lg border border-dashed border-white/20 bg-[#050505] p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#0052FF]" />
+                      <span className="text-sm font-medium text-white">Protocol Description (PDF)</span>
+                      <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-400">Required</span>
+                    </div>
+                    {protocolPdf && (
+                      <button onClick={() => removeFile('protocolPdf')} className="text-zinc-500 hover:text-red-400">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  {protocolPdf ? (
+                    <div className="flex items-center gap-3 rounded bg-white/5 p-3">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <div className="flex-1">
+                        <p className="text-sm text-white">{protocolPdf.name}</p>
+                        <p className="text-xs text-zinc-500">{(protocolPdf.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-white/10 bg-[#0a0a0a] py-6 transition-colors hover:bg-white/5">
+                      <FileText className="mb-2 w-6 h-6 text-zinc-500" />
+                      <span className="text-sm text-zinc-400">Click to upload PDF</span>
+                      <span className="text-xs text-zinc-600">Max 10MB</span>
+                      <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload('protocolPdf', e)} />
+                    </label>
+                  )}
+                </div>
+
+                {/* Additional Docs Upload */}
+                <div className="rounded-lg border border-dashed border-white/20 bg-[#050505] p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <File className="w-4 h-4 text-zinc-400" />
+                      <span className="text-sm font-medium text-white">Additional Documents (Optional)</span>
+                      <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-400">Optional</span>
+                    </div>
+                    {additionalDocs && (
+                      <button onClick={() => removeFile('additionalDocs')} className="text-zinc-500 hover:text-red-400">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  {additionalDocs ? (
+                    <div className="flex items-center gap-3 rounded bg-white/5 p-3">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <div className="flex-1">
+                        <p className="text-sm text-white">{additionalDocs.name}</p>
+                        <p className="text-xs text-zinc-500">{(additionalDocs.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-white/10 bg-[#0a0a0a] py-6 transition-colors hover:bg-white/5">
+                      <Plus className="mb-2 w-6 h-6 text-zinc-500" />
+                      <span className="text-sm text-zinc-400">Click to upload (Whitepaper, Tokenomics, etc.)</span>
+                      <span className="text-xs text-zinc-600">Max 10MB</span>
+                      <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload('additionalDocs', e)} />
+                    </label>
+                  )}
+                </div>
+
+                {/* Video Links */}
+                <div className="rounded-lg border border-dashed border-white/20 bg-[#050505] p-5">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Video className="w-4 h-4 text-[#0052FF]" />
+                    <span className="text-sm font-medium text-white">Video Links (Optional)</span>
+                    <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-medium text-zinc-400">Optional</span>
+                  </div>
+                  
+                  <div className="mb-3 flex gap-2">
+                    <input
+                      type="url"
+                      value={newVideoLink}
+                      onChange={(e) => setNewVideoLink(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..."
+                      className="flex-1 rounded-lg border border-white/10 bg-[#0a0a0a] px-4 py-2 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-[#0052FF]/50 focus:outline-none"
+                    />
+                    <button
+                      onClick={addVideoLink}
+                      className="flex items-center gap-2 rounded-lg bg-[#0052FF] px-4 py-2 text-sm font-medium text-white hover:bg-[#3377FF]"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
+                  
+                  {videoLinks.length > 0 && (
+                    <div className="space-y-2">
+                      {videoLinks.map((link, idx) => (
+                        <div key={idx} className="flex items-center gap-2 rounded bg-white/5 p-2">
+                          <Video className="w-4 h-4 text-red-500" />
+                          <a href={link} target="_blank" rel="noopener noreferrer" className="flex-1 text-sm text-[#0052FF] hover:underline truncate">
+                            {link}
+                          </a>
+                          <button onClick={() => removeVideoLink(link)} className="text-zinc-500 hover:text-red-400">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Document Summary */}
+                <div className="rounded-lg bg-[#050505] p-4">
+                  <div className="mb-3 text-sm font-medium text-white">Submission Completeness</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400">Pitch Deck</span>
+                      {pitchDeck ? <Check className="w-4 h-4 text-emerald-400" /> : <X className="w-4 h-4 text-red-400" />}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400">Protocol Docs</span>
+                      {protocolPdf ? <Check className="w-4 h-4 text-emerald-400" /> : <X className="w-4 h-4 text-red-400" />}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400">Additional Docs</span>
+                      {additionalDocs ? <Check className="w-4 h-4 text-emerald-400" /> : <span className="text-xs text-zinc-600">Optional</span>}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400">Video Links</span>
+                      {videoLinks.length > 0 ? <Check className="w-4 h-4 text-emerald-400" /> : <span className="text-xs text-zinc-600">Optional</span>}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

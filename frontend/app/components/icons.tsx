@@ -31,6 +31,9 @@ export const Medal = (props: IconProps) => <IconGlyph {...props}><circle cx="12"
 export const PlugsConnected = (props: IconProps) => <IconGlyph {...props}><path d="M8 7V3" /><path d="M16 7V3" /><path d="M6 7h12v4a6 6 0 0 1-12 0V7Z" /><path d="M12 17v4" /></IconGlyph>;
 export const Plus = (props: IconProps) => <IconGlyph {...props}><path d="M12 5v14" /><path d="M5 12h14" /></IconGlyph>;
 export const ShieldCheck = (props: IconProps) => <IconGlyph {...props}><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3Z" /><path d="m8.5 12 2 2 5-5" /></IconGlyph>;
+export const Upload = (props: IconProps) => <IconGlyph {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></IconGlyph>;
+export const File = (props: IconProps) => <IconGlyph {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z" /><polyline points="14 2 14 8 20 8" /></IconGlyph>;
+export const Video = (props: IconProps) => <IconGlyph {...props}><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" ry="2" /></IconGlyph>;
 export const ShoppingCart = (props: IconProps) => <IconGlyph {...props}><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></IconGlyph>;
 export const Sparkle = (props: IconProps) => <IconGlyph {...props}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" /><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z" /></IconGlyph>;
 export const Target = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></IconGlyph>;

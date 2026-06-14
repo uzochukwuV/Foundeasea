@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { IdeaService } from './idea.service';
 import { AgentService } from '../agents/agent.service';
+import { IpfsService } from '../common/ipfs.service';
 import { CreateIdeaDto } from './dto/create-idea.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
@@ -21,7 +22,128 @@ export class IdeasController {
   constructor(
     private ideaService: IdeaService,
     private agentService: AgentService,
+    private ipfsService: IpfsService,
   ) {}
+
+  /**
+   * Full submission with documents for institutional-grade idea presentation
+   */
+  @Post('submit')
+  @ApiOperation({ summary: 'Submit complete idea with pitch deck, protocol docs, and videos' })
+  async submitFullIdea(@Body() dto: {
+    title: string;
+    oneLiner: string;
+    description: string;
+    category: string;
+    tags: string[];
+    targetRaise?: number;
+    softCap?: number;
+    hardCap?: number;
+    fundingDays?: number;
+    competitionPrizeBps?: number;
+    builderAllocBps?: number;
+    pitchDeckBase64?: string;      // PDF base64
+    protocolPdfBase64?: string;    // PDF base64
+    additionalDocsBase64?: string; // PDF base64
+    videoLinks?: string[];
+  }) {
+    this.logger.log(`[POST /ideas/submit] Full submission: ${dto.title}`);
+
+    try {
+      // 1. Upload all documents to IPFS
+      const documents: any = {};
+      if (dto.pitchDeckBase64) {
+        documents.pitchDeck = {
+          buffer: Buffer.from(dto.pitchDeckBase64, 'base64'),
+          fileName: `${dto.title}-pitch-deck.pdf`
+        };
+      }
+      if (dto.protocolPdfBase64) {
+        documents.protocolPdf = {
+          buffer: Buffer.from(dto.protocolPdfBase64, 'base64'),
+          fileName: `${dto.title}-protocol.pdf`
+        };
+      }
+      if (dto.additionalDocsBase64) {
+        documents.additionalDocs = {
+          buffer: Buffer.from(dto.additionalDocsBase64, 'base64'),
+          fileName: `${dto.title}-additional-docs.pdf`
+        };
+      }
+
+      this.logger.log('Uploading documents to IPFS...');
+      const uploadResult = await this.ipfsService.uploadFullSubmission(
+        {
+          title: dto.title,
+          description: dto.description,
+          oneLiner: dto.oneLiner,
+          category: dto.category,
+          tags: dto.tags || [],
+        },
+        documents,
+        dto.videoLinks
+      );
+
+      if (!uploadResult.success) {
+        throw new Error(`IPFS upload failed: ${uploadResult.error}`);
+      }
+
+      this.logger.log(`✓ Documents uploaded: metadataHash=${uploadResult.metadataHash}`);
+
+      // 2. Run AI validation with full submission content
+      this.logger.log('Running AI validation on full submission...');
+      const aiResult = await this.agentService.scoreIdeaWithDocuments(
+        dto.title,
+        dto.description,
+        {
+          metadataHash: uploadResult.metadataHash,
+          pitchDeckHash: uploadResult.pitchDeckHash,
+          protocolPdfHash: uploadResult.protocolPdfHash,
+          additionalDocsHash: uploadResult.additionalDocsHash,
+          videoLinks: dto.videoLinks || [],
+        }
+      );
+
+      this.logger.log(`✓ AI validation: score=${aiResult.score}, approved=${aiResult.approved}`);
+
+      // 3. Calculate funding config
+      const fundingDeadline = Math.floor(Date.now() / 1000) + (dto.fundingDays || 30) * 24 * 60 * 60;
+
+      // 4. Return submission result
+      return {
+        success: true,
+        submissionId: `sub-${Date.now()}`,
+        approved: aiResult.approved,
+        aiScore: aiResult.score,
+        aiReasoning: aiResult.reasoning,
+        submission: {
+          metadataHash: uploadResult.metadataHash,
+          pitchDeckHash: uploadResult.pitchDeckHash,
+          protocolPdfHash: uploadResult.protocolPdfHash,
+          additionalDocsHash: uploadResult.additionalDocsHash,
+          videoLinks: dto.videoLinks || [],
+          metadataGatewayUrl: `https://gateway.pinata.cloud/ipfs/${uploadResult.metadataHash}`,
+        },
+        contractConfig: {
+          metadataIpfsHash: uploadResult.metadataHash,
+          targetRaise: String(dto.targetRaise || 850000),
+          softCap: String(dto.softCap || 250000),
+          hardCap: String(dto.hardCap || 1000000),
+          fundingDeadline,
+          competitionPrizeBps: dto.competitionPrizeBps || 800,
+          builderAllocBps: dto.builderAllocBps || 2000,
+          gateType: 0,
+          gateParams: '0x',
+        },
+        message: aiResult.approved
+          ? 'Submission approved! You can now create the idea on-chain.'
+          : 'Submission needs revision. AI feedback: ' + aiResult.reasoning,
+      };
+    } catch (error: any) {
+      this.logger.error('❌ Failed to submit idea:', error.message);
+      throw error;
+    }
+  }
 
   @Post('validate')
   @ApiOperation({ summary: 'Validate an idea with AI and return contract config' })

@@ -4,6 +4,7 @@ import { BlockchainModule } from './blockchain/blockchain.module';
 import { AgentsModule } from './agents/agents.module';
 import { IdeasModule } from './ideas/ideas.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
     AgentsModule,
     IdeasModule,
     OnboardingModule,
+    CommonModule,
   ],
 })
 export class AppModule {}

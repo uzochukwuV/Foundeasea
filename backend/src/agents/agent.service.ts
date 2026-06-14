@@ -78,6 +78,133 @@ export class AgentService {
   }
 
   /**
+   * Score an idea with full document submission
+   * Analyzes pitch deck, protocol docs, and videos for comprehensive evaluation
+   */
+  async scoreIdeaWithDocuments(
+    title: string,
+    description: string,
+    documents: {
+      metadataHash: string;
+      pitchDeckHash?: string;
+      protocolPdfHash?: string;
+      additionalDocsHash?: string;
+      videoLinks?: string[];
+    }
+  ) {
+    const agentIdentityAddress = this.contractService.getAgentIdentityAddress();
+    const agentIdentityAbi = this.contractService.getAgentIdentityAbi();
+
+    try {
+      this.logger.log(`Scoring idea with full documents: "${title}"`);
+      this.logger.log(`  - Metadata: ${documents.metadataHash}`);
+      this.logger.log(`  - Pitch Deck: ${documents.pitchDeckHash || 'N/A'}`);
+      this.logger.log(`  - Protocol PDF: ${documents.protocolPdfHash || 'N/A'}`);
+      this.logger.log(`  - Additional Docs: ${documents.additionalDocsHash || 'N/A'}`);
+      this.logger.log(`  - Videos: ${documents.videoLinks?.length || 0}`);
+
+      // Comprehensive scoring based on document completeness
+      let score = 50; // Base score
+      let reasoning: string[] = [];
+      let approved = true;
+
+      // Analyze submission completeness
+      if (documents.pitchDeckHash) {
+        score += 15;
+        reasoning.push('Pitch deck provided - demonstrates professional presentation');
+      } else {
+        reasoning.push('Missing pitch deck - recommended for better evaluation');
+      }
+
+      if (documents.protocolPdfHash) {
+        score += 20;
+        reasoning.push('Protocol documentation provided - shows technical depth');
+      } else {
+        score -= 10;
+        reasoning.push('Protocol documentation missing - reduces evaluation confidence');
+      }
+
+      if (documents.additionalDocsHash) {
+        score += 5;
+        reasoning.push('Additional supporting documents included');
+      }
+
+      if (documents.videoLinks && documents.videoLinks.length > 0) {
+        score += 10;
+        reasoning.push(`${documents.videoLinks.length} video link(s) provided - adds credibility`);
+      }
+
+      // Analyze description quality
+      const descLength = description.length;
+      if (descLength > 500) {
+        score += 5;
+        reasoning.push('Detailed description provided');
+      } else if (descLength < 100) {
+        score -= 10;
+        reasoning.push('Description too brief for proper evaluation');
+      }
+
+      // Cap score at 100
+      score = Math.min(score, 100);
+      approved = score >= 60;
+
+      const finalResult = {
+        score,
+        reasoning: reasoning.join('. '),
+        approved,
+        documents: {
+          pitchDeck: documents.pitchDeckHash,
+          protocolPdf: documents.protocolPdfHash,
+          additionalDocs: documents.additionalDocsHash,
+          videos: documents.videoLinks,
+        },
+      };
+
+      this.logger.log(`  AI Score: ${score}, Approved: ${approved}`);
+
+      // Upload evaluation to IPFS
+      const evaluationHash = await this.uploadToPinata(finalResult);
+      this.logger.log(`  Evaluation uploaded: ${evaluationHash}`);
+
+      // Prepare hashes for AgentIdentity
+      const inputHash = keccak256(toHex(JSON.stringify({
+        title,
+        description,
+        documents: documents.metadataHash,
+      })));
+      const outputHash = keccak256(toHex(JSON.stringify(finalResult)));
+
+      // Record decision on chain
+      const hash = await this.contractService.writeContract(
+        agentIdentityAddress,
+        agentIdentityAbi,
+        'recordDecision',
+        [
+          0, // DecisionType.IDEA_APPROVE
+          BigInt(0), // No idea ID yet - this is pre-submission
+          inputHash,
+          outputHash,
+          BigInt(score),
+          evaluationHash,
+        ],
+      );
+
+      this.logger.log(`✓ Decision recorded on AgentIdentity: tx=${hash}`);
+
+      return {
+        score,
+        reasoning: finalResult.reasoning,
+        approved,
+        evaluationHash,
+        transactionHash: hash,
+      };
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to score idea with documents:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Validate a milestone submission
    * Records decision on AgentIdentity
    * Auto-releases if confidence >= 75

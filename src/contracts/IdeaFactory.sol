@@ -49,6 +49,15 @@ contract IdeaFactory is Ownable {
         bytes gateParams;
     }
 
+    // Extended submission data stored off-chain
+    struct IdeaSubmission {
+        string pitchDeckIpfsHash;     // Pitch deck PDF
+        string protocolPdfIpfsHash;   // Protocol description PDF
+        string additionalDocsIpfsHash; // Other supporting documents
+        string videoLinks;            // Comma-separated video URLs
+        uint256 submittedAt;          // Timestamp
+    }
+
     struct Idea {
         address creator;
         address ideaToken;
@@ -58,6 +67,7 @@ contract IdeaFactory is Ownable {
         uint256 aiScore;
         string approvalReasonHash;
         IdeaConfig config;
+        IdeaSubmission submission;  // Full submission with docs
     }
 
     mapping(uint256 => Idea) public ideas;
@@ -75,6 +85,7 @@ contract IdeaFactory is Ownable {
     event IdeaAbandoned(uint256 indexed ideaId, uint256 refundAmount);
     event FundingPoolConfigured(uint256 indexed ideaId, address fundingPool);
     event RevenueSourceWired(uint256 indexed ideaId, address revenueSource);
+    event SubmissionUpdated(uint256 indexed ideaId, string pitchDeckHash, string protocolPdfHash, string additionalDocsHash, string videoLinks);
 
     constructor(
         address _usdy, 
@@ -139,7 +150,14 @@ contract IdeaFactory is Ownable {
             status: IdeaStatus.PENDING,
             aiScore: 0,
             approvalReasonHash: "",
-            config: config
+            config: config,
+            submission: IdeaSubmission({
+                pitchDeckIpfsHash: "",
+                protocolPdfIpfsHash: "",
+                additionalDocsIpfsHash: "",
+                videoLinks: "",
+                submittedAt: 0
+            })
         });
 
         ideaTokens[ideaId] = ideaToken;
@@ -148,6 +166,32 @@ contract IdeaFactory is Ownable {
 
         emit IdeaCreated(ideaId, msg.sender, ideaToken, fundingPool);
         emit FundingPoolConfigured(ideaId, fundingPool);
+    }
+
+    /**
+     * @notice Update submission documents for an idea
+     * @param ideaId The idea ID
+     * @param submission The submission data with IPFS hashes
+     */
+    function updateSubmission(uint256 ideaId, IdeaSubmission calldata submission) external {
+        require(ideas[ideaId].creator == msg.sender, "Not creator");
+        require(ideas[ideaId].status == IdeaStatus.PENDING, "Cannot update after review");
+        
+        ideas[ideaId].submission = submission;
+        emit SubmissionUpdated(
+            ideaId, 
+            submission.pitchDeckIpfsHash, 
+            submission.protocolPdfIpfsHash,
+            submission.additionalDocsIpfsHash,
+            submission.videoLinks
+        );
+    }
+
+    /**
+     * @notice Get full submission data for an idea
+     */
+    function getSubmission(uint256 ideaId) external view returns (IdeaSubmission memory) {
+        return ideas[ideaId].submission;
     }
 
     function _deployFundingPool(

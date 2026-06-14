@@ -13,6 +13,7 @@ const blockchain_module_1 = require("./blockchain/blockchain.module");
 const agents_module_1 = require("./agents/agents.module");
 const ideas_module_1 = require("./ideas/ideas.module");
 const onboarding_module_1 = require("./onboarding/onboarding.module");
+const common_module_1 = require("./common/common.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -28,6 +29,7 @@ exports.AppModule = AppModule = __decorate([
             agents_module_1.AgentsModule,
             ideas_module_1.IdeasModule,
             onboarding_module_1.OnboardingModule,
+            common_module_1.CommonModule,
         ],
     })
 ], AppModule);
