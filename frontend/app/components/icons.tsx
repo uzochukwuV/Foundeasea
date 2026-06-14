@@ -35,6 +35,7 @@ export const ShoppingCart = (props: IconProps) => <IconGlyph {...props}><circle 
 export const Sparkle = (props: IconProps) => <IconGlyph {...props}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" /><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z" /></IconGlyph>;
 export const Target = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></IconGlyph>;
 export const TrendUp = (props: IconProps) => <IconGlyph {...props}><path d="M4 17 10 11l4 4 6-8" /><path d="M14 7h6v6" /></IconGlyph>;
+export const TrendDown = (props: IconProps) => <IconGlyph {...props}><path d="M4 7 10 13l4-4 6 8" /><path d="M14 17h6v-6" /></IconGlyph>;
 export const Trophy = (props: IconProps) => <IconGlyph {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></IconGlyph>;
 export const Users = (props: IconProps) => <IconGlyph {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></IconGlyph>;
 export const UsersThree = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="8" r="3" /><path d="M6 20a6 6 0 0 1 12 0" /><path d="M4 10a2 2 0 0 0 0 4" /><path d="M20 10a2 2 0 0 1 0 4" /></IconGlyph>;
@@ -42,7 +43,8 @@ export const Vote = (props: IconProps) => <IconGlyph {...props}><path d="M22 11.
 export const Wallet = (props: IconProps) => <IconGlyph {...props}><path d="M4 7h16v12H4a2 2 0 0 1-2-2V7a3 3 0 0 1 3-3h13" /><path d="M16 13h4" /></IconGlyph>;
 export const X = (props: IconProps) => <IconGlyph {...props}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></IconGlyph>;
 export const Alert = (props: IconProps) => <IconGlyph {...props}><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 4.2 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" /></IconGlyph>;
-export const AlertCircle = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><path d="M12 8v4" /><path d="M12 16h.01" /></IconGlyph>;export const Search = (props: IconProps) => <IconGlyph {...props}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></IconGlyph>;
+export const AlertCircle = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><path d="M12 8v4" /><path d="M12 16h.01" /></IconGlyph>;
+export const Search = (props: IconProps) => <IconGlyph {...props}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></IconGlyph>;
 export const ChevronRight = (props: IconProps) => <IconGlyph {...props}><path d="m9 18 6-6-6-6" /></IconGlyph>;
 export const Menu = (props: IconProps) => <IconGlyph {...props}><path d="M4 12h16" /><path d="M4 6h16" /><path d="M4 18h16" /></IconGlyph>;
 export const Bot = (props: IconProps) => <IconGlyph {...props}><rect width="18" height="11" x="3" y="11" rx="2" /><circle cx="12" cy="5" r="2" /><path d="M12 7v2" /><path d="M8 16a4 4 0 1 1 8 0" /></IconGlyph>;
