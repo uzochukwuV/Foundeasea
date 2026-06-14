@@ -47,3 +47,4 @@ export const Zap = (props: IconProps) => <IconGlyph {...props}><path d="M4 14a1 
 export const Compass = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></IconGlyph>;
 export const ChevronDown = (props: IconProps) => <IconGlyph {...props}><path d="m6 9 6 6 6-6" /></IconGlyph>;
 export const Globe = (props: IconProps) => <IconGlyph {...props}><circle cx="12" cy="12" r="9" /><path d="M12 3a14.5 14.5 0 0 0 0 18" /><path d="M3 12h18" /></IconGlyph>;
+export const LogOut = (props: IconProps) => <IconGlyph {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></IconGlyph>;
