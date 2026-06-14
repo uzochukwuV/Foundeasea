@@ -4,11 +4,13 @@ import csv
 import io
 import json
 import os
+import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import httpx
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -34,6 +36,85 @@ app.add_middleware(
 
 def env_value(name: str) -> str:
     return os.environ.get(name, "")
+
+
+DATA_DIR = Path(__file__).parent / "data"
+IDEA_STORE_PATH = DATA_DIR / "ideas.json"
+
+IDEA_FACTORY_ABI = [
+    {"inputs": [], "name": "nextIdeaId", "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}], "stateMutability": "view", "type": "function"},
+    {"inputs": [{"internalType": "uint256", "name": "ideaId", "type": "uint256"}], "name": "getIdea", "outputs": [{"internalType": "address", "name": "creator", "type": "address"}, {"internalType": "address", "name": "ideaToken", "type": "address"}, {"internalType": "address", "name": "fundingPool", "type": "address"}, {"internalType": "address", "name": "fundingGate", "type": "address"}, {"internalType": "enum IdeaFactory.IdeaStatus", "name": "status", "type": "uint8"}, {"internalType": "uint256", "name": "aiScore", "type": "uint256"}, {"internalType": "string", "name": "approvalReasonHash", "type": "string"}], "stateMutability": "view", "type": "function"},
+    {"inputs": [{"components": [{"internalType": "string", "name": "metadataIpfsHash", "type": "string"}, {"internalType": "uint256", "name": "targetRaise", "type": "uint256"}, {"internalType": "uint256", "name": "softCap", "type": "uint256"}, {"internalType": "uint256", "name": "hardCap", "type": "uint256"}, {"internalType": "uint256", "name": "fundingDeadline", "type": "uint256"}, {"internalType": "uint256", "name": "competitionPrizeBps", "type": "uint256"}, {"internalType": "uint256", "name": "builderAllocBps", "type": "uint256"}, {"internalType": "enum GateType", "name": "gateType", "type": "uint8"}, {"internalType": "bytes", "name": "gateParams", "type": "bytes"}], "internalType": "struct IdeaFactory.IdeaConfig", "name": "config", "type": "tuple"}], "name": "createIdea", "outputs": [{"internalType": "uint256", "name": "ideaId", "type": "uint256"}], "stateMutability": "nonpayable", "type": "function"},
+    {"anonymous": False, "inputs": [{"indexed": True, "internalType": "uint256", "name": "ideaId", "type": "uint256"}, {"indexed": False, "internalType": "address", "name": "creator", "type": "address"}, {"indexed": False, "internalType": "address", "name": "ideaToken", "type": "address"}, {"indexed": False, "internalType": "address", "name": "fundingPool", "type": "address"}], "name": "IdeaCreated", "type": "event"},
+    {"inputs": [{"internalType": "uint256", "name": "ideaId", "type": "uint256"}, {"internalType": "uint256", "name": "score", "type": "uint256"}, {"internalType": "string", "name": "reasonHash", "type": "string"}], "name": "aiApproveIdea", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
+]
+
+USDY_ABI = [
+    {"inputs": [{"internalType": "address", "name": "spender", "type": "address"}, {"internalType": "uint256", "name": "amount", "type": "uint256"}], "name": "approve", "outputs": [{"internalType": "bool", "name": "", "type": "bool"}], "stateMutability": "nonpayable", "type": "function"},
+    {"inputs": [{"internalType": "address", "name": "owner", "type": "address"}, {"internalType": "address", "name": "spender", "type": "address"}], "name": "allowance", "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}], "stateMutability": "view", "type": "function"},
+]
+
+STATUS_LABELS = ["pending", "approved", "rejected", "abandoned", "funding", "active", "completed", "failed"]
+
+
+def load_idea_store() -> Dict[str, Any]:
+    DATA_DIR.mkdir(exist_ok=True)
+    if not IDEA_STORE_PATH.exists():
+        return {"validations": {}, "onchain": {}}
+    try:
+        return json.loads(IDEA_STORE_PATH.read_text())
+    except Exception:
+        return {"validations": {}, "onchain": {}}
+
+
+def save_idea_store(store: Dict[str, Any]) -> None:
+    DATA_DIR.mkdir(exist_ok=True)
+    IDEA_STORE_PATH.write_text(json.dumps(store, indent=2, sort_keys=True))
+
+
+def usdy_amount(value: float | int) -> int:
+    return int(float(value) * 1_000_000)
+
+
+def get_web3_contract():
+    from web3 import Web3
+
+    rpc_url = env_value("MANTLE_SEPOLIA_RPC") or env_value("RPC_URL")
+    factory = env_value("IDEA_FACTORY_MANTLE")
+    if not rpc_url or not factory:
+        raise RuntimeError("Mantle RPC or IdeaFactory address missing")
+    web3 = Web3(Web3.HTTPProvider(rpc_url, request_kwargs={"timeout": 10}))
+    contract = web3.eth.contract(address=Web3.to_checksum_address(factory), abi=IDEA_FACTORY_ABI)
+    return web3, contract
+
+
+def metadata_to_feed_item(validation_id: str, metadata: Dict[str, Any], onchain: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    title = metadata.get("title") or f"Onchain Idea {onchain.get('ideaId') if onchain else validation_id}"
+    target_raise = float(metadata.get("targetRaise", 0) or 0)
+    ai_score = int(metadata.get("aiScore", onchain.get("aiScore", 0) if onchain else 0) or 0)
+    idea_id = f"onchain-{onchain['ideaId']}" if onchain and onchain.get("ideaId") is not None else f"draft-{validation_id}"
+    return {
+        "id": idea_id,
+        "title": title,
+        "oneLiner": metadata.get("oneLiner") or metadata.get("tagline") or "Onchain idea awaiting richer backend metadata.",
+        "category": metadata.get("category", "Protocol"),
+        "stage": (onchain or {}).get("status", metadata.get("stage", "funding")),
+        "gateType": metadata.get("gateType", "Open"),
+        "targetRaise": target_raise,
+        "funded": float(metadata.get("funded", 0) or 0),
+        "aiConfidence": ai_score,
+        "trending24hRaise": float(metadata.get("trending24hRaise", 0) or 0),
+        "fundingVelocity": metadata.get("fundingVelocity", [4, 9, 16, 25, 36, 49, max(ai_score, 50)]),
+        "investorCount": int(metadata.get("investorCount", 0) or 0),
+        "averageTicket": int(metadata.get("averageTicket", 0) or 0),
+        "revenuePotential": metadata.get("revenuePotential", "Under review"),
+        "builderReputation": int(metadata.get("builderReputation", 0) or 0),
+        "socialProof": metadata.get("socialProof", "New idea created through the smart contract flow"),
+        "topBuilderMVPs": metadata.get("topBuilderMVPs", metadata.get("milestones", []))[:3] or ["AI validation", "Funding setup", "Builder selection"],
+        "riskLevel": metadata.get("riskLevel", "New"),
+        "source": "contract" if onchain else "backend",
+        "onchain": onchain or {},
+    }
 
 
 IDEAS: List[Dict[str, Any]] = [
@@ -204,6 +285,80 @@ class RecommendationRequest(BaseModel):
     ideaId: Optional[str] = Field(default=None)
 
 
+class IdeaValidationRequest(BaseModel):
+    creator: str = Field(default="")
+    title: str
+    oneLiner: str
+    description: str
+    category: str
+    targetRaise: float = Field(gt=0)
+    softCap: float = Field(gt=0)
+    hardCap: float = Field(gt=0)
+    fundingDays: int = Field(default=30, ge=1, le=365)
+    competitionPrizeBps: int = Field(default=800, ge=0, le=5000)
+    builderAllocBps: int = Field(default=2000, ge=1000, le=30000)
+    gateType: int = Field(default=0, ge=0, le=3)
+    milestones: List[str] = Field(default_factory=list)
+
+
+class IdeaCreatedRequest(BaseModel):
+    validationId: str
+    txHash: str
+    ideaId: Optional[int] = None
+    creator: str = ""
+
+
+def score_idea_payload(payload: IdeaValidationRequest) -> Dict[str, Any]:
+    market_score = 20 if len(payload.description) > 180 else 12
+    economics_score = 20 if payload.softCap <= payload.targetRaise <= payload.hardCap else 0
+    milestone_score = min(20, len([m for m in payload.milestones if len(m.strip()) > 8]) * 7)
+    revenue_score = 20 if re.search(r"revenue|customer|paid|monetiz|usd|saas|subscription", payload.description, re.I) else 10
+    clarity_score = 20 if len(payload.oneLiner) <= 160 and len(payload.title) <= 80 else 12
+    score = max(0, min(96, market_score + economics_score + milestone_score + revenue_score + clarity_score))
+    approved = score >= 70
+    return {
+        "approved": approved,
+        "score": score,
+        "summary": "Approved for onchain creation" if approved else "Needs stronger market, milestone, or revenue clarity before onchain creation",
+        "feedback": [
+            "Economics are internally consistent" if economics_score else "Soft cap, target raise, and hard cap need to be ordered correctly",
+            "Milestone plan is specific enough" if milestone_score >= 14 else "Add at least two concrete builder milestones",
+            "Revenue path is visible" if revenue_score >= 20 else "Clarify who pays and how revenue reaches investors",
+        ],
+    }
+
+
+def tokenrouter_idea_validation(payload: IdeaValidationRequest) -> Optional[Dict[str, Any]]:
+    api_key = env_value("TOKENROUTER_API_KEY")
+    if not api_key:
+        return None
+    base_url = (env_value("TOKENROUTER_BASE_URL") or "https://api.tokenrouter.io/v1").rstrip("/")
+    models = [model for model in [env_value("TOKENROUTER_MODEL"), env_value("TOKENROUTER_BASE_MODEL"), "openai/gpt-4o-mini"] if model]
+    prompt = json.dumps(payload.model_dump(), separators=(",", ":"))
+    instruction = (
+        "You are FounderSea's AI idea validation agent. Return only JSON with approved boolean, score 0-100, "
+        "summary string, feedback array of 3 strings. Approve only if market clarity, revenue path, and builder milestones are credible. Payload: " + prompt
+    )
+    for model in models:
+        try:
+            response = httpx.post(
+                f"{base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": [{"role": "system", "content": "Return valid JSON only."}, {"role": "user", "content": instruction}], "temperature": 0.2, "max_tokens": 500},
+                timeout=10,
+            )
+            if response.status_code >= 400:
+                continue
+            content = response.json()["choices"][0]["message"]["content"]
+            parsed = json.loads(content.strip().removeprefix("```json").removesuffix("```").strip())
+            if "approved" in parsed and "score" in parsed:
+                parsed["score"] = int(parsed.get("score", 0))
+                return parsed
+        except Exception:
+            continue
+    return None
+
+
 def tokenrouter_strategy(payload: RecommendationRequest, ranked: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     api_key = env_value("TOKENROUTER_API_KEY")
     if not api_key:
@@ -277,13 +432,132 @@ def contract_status() -> Dict[str, Any]:
     }
 
 
+@app.get("/api/contracts/idea-factory")
+def idea_factory_config() -> Dict[str, Any]:
+    factory = env_value("IDEA_FACTORY_MANTLE")
+    usdy = env_value("USDY_MANTLE")
+    if not factory or not usdy:
+        raise HTTPException(status_code=503, detail="IdeaFactory or USDY address missing")
+    return {
+        "chainId": 5003,
+        "chainHex": "0x138b",
+        "chainName": "Mantle Sepolia",
+        "ideaFactory": factory,
+        "usdy": usdy,
+        "creatorDepositUsdy": 500,
+        "creatorDepositBaseUnits": str(500_000_000),
+        "ideaFactoryAbi": IDEA_FACTORY_ABI,
+        "usdyAbi": USDY_ABI,
+    }
+
+
+def read_contract_ideas() -> List[Dict[str, Any]]:
+    try:
+        _, contract = get_web3_contract()
+        next_id = contract.functions.nextIdeaId().call()
+        store = load_idea_store()
+        by_onchain = {str(item.get("ideaId")): item for item in store.get("onchain", {}).values() if item.get("ideaId") is not None}
+        items: List[Dict[str, Any]] = []
+        for idea_id in range(int(next_id)):
+            creator, idea_token, funding_pool, funding_gate, status, ai_score, reason_hash = contract.functions.getIdea(idea_id).call()
+            onchain = {
+                "ideaId": idea_id,
+                "creator": creator,
+                "ideaToken": idea_token,
+                "fundingPool": funding_pool,
+                "fundingGate": funding_gate,
+                "statusCode": int(status),
+                "status": STATUS_LABELS[int(status)] if int(status) < len(STATUS_LABELS) else "unknown",
+                "aiScore": int(ai_score),
+                "approvalReasonHash": reason_hash,
+            }
+            metadata = by_onchain.get(str(idea_id), {}).get("metadata", {})
+            items.append(metadata_to_feed_item(str(idea_id), metadata, onchain))
+        return items
+    except Exception:
+        return []
+
+
+@app.get("/api/ideas/contract")
+def contract_ideas() -> Dict[str, Any]:
+    items = read_contract_ideas()
+    return {"count": len(items), "data": items, "source": "contract_live_read"}
+
+
+@app.post("/api/ideas/validate")
+def validate_idea(payload: IdeaValidationRequest) -> Dict[str, Any]:
+    if payload.softCap > payload.hardCap or payload.targetRaise < payload.softCap or payload.targetRaise > payload.hardCap:
+        raise HTTPException(status_code=422, detail="Require softCap <= targetRaise <= hardCap")
+    ai_result = tokenrouter_idea_validation(payload) or score_idea_payload(payload)
+    validation_id = f"val-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
+    funding_deadline = int(datetime.now(timezone.utc).timestamp()) + payload.fundingDays * 86400
+    config = {
+        "metadataIpfsHash": validation_id,
+        "targetRaise": str(usdy_amount(payload.targetRaise)),
+        "softCap": str(usdy_amount(payload.softCap)),
+        "hardCap": str(usdy_amount(payload.hardCap)),
+        "fundingDeadline": funding_deadline,
+        "competitionPrizeBps": payload.competitionPrizeBps,
+        "builderAllocBps": payload.builderAllocBps,
+        "gateType": payload.gateType,
+        "gateParams": "0x",
+    }
+    metadata = payload.model_dump()
+    metadata.update({"aiScore": ai_result["score"], "stage": "validated" if ai_result["approved"] else "needs_revision"})
+    store = load_idea_store()
+    store.setdefault("validations", {})[validation_id] = {
+        "validationId": validation_id,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "metadata": metadata,
+        "ai": ai_result,
+        "contractConfig": config,
+    }
+    save_idea_store(store)
+    return {
+        "validationId": validation_id,
+        "approved": bool(ai_result["approved"]),
+        "score": int(ai_result["score"]),
+        "summary": ai_result.get("summary", "AI validation completed"),
+        "feedback": ai_result.get("feedback", []),
+        "contractConfig": config,
+        "factory": idea_factory_config(),
+    }
+
+
+@app.post("/api/ideas/created")
+def register_created_idea(payload: IdeaCreatedRequest) -> Dict[str, Any]:
+    store = load_idea_store()
+    validation = store.get("validations", {}).get(payload.validationId)
+    if not validation:
+        raise HTTPException(status_code=404, detail="Validation not found")
+    idea_id = payload.ideaId
+    if idea_id is None:
+        try:
+            _, contract = get_web3_contract()
+            idea_id = max(int(contract.functions.nextIdeaId().call()) - 1, 0)
+        except Exception:
+            idea_id = None
+    record = {
+        "validationId": payload.validationId,
+        "txHash": payload.txHash,
+        "ideaId": idea_id,
+        "creator": payload.creator,
+        "metadata": validation.get("metadata", {}),
+        "registeredAt": datetime.now(timezone.utc).isoformat(),
+    }
+    store.setdefault("onchain", {})[payload.validationId] = record
+    save_idea_store(store)
+    return {"ok": True, "record": record}
+
+
 @app.get("/api/ideas/feed")
 def idea_feed(
     stage: str = Query(default="all"),
     minConfidence: int = Query(default=0, ge=0, le=100),
     sort: str = Query(default="ai"),
 ) -> Dict[str, Any]:
-    ideas = [idea for idea in IDEAS if (stage == "all" or idea["stage"] == stage) and idea["aiConfidence"] >= minConfidence]
+    hybrid_ideas = read_contract_ideas() + IDEAS
+    ideas = [idea for idea in hybrid_ideas if (stage == "all" or idea["stage"] == stage) and idea["aiConfidence"] >= minConfidence]
     if sort == "velocity":
         ideas.sort(key=lambda item: item["trending24hRaise"], reverse=True)
     elif sort == "reputation":

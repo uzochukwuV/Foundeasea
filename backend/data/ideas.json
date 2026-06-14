@@ -1,0 +1,51 @@
+{
+  "onchain": {},
+  "validations": {
+    "val-20260613124825398591": {
+      "ai": {
+        "approved": true,
+        "feedback": [
+          "Strong alignment with current trends in SaaS revenue management.",
+          "Clear integration with existing tools like Stripe enhances market appeal.",
+          "Milestones are realistic and provide a solid roadmap for development."
+        ],
+        "score": 85,
+        "summary": "The idea presents a clear market need for revenue intelligence in the SaaS sector, with a credible revenue path and achievable builder milestones."
+      },
+      "contractConfig": {
+        "builderAllocBps": 2000,
+        "competitionPrizeBps": 800,
+        "fundingDeadline": 1783946905,
+        "gateParams": "0x",
+        "gateType": 0,
+        "hardCap": "1000000000000",
+        "metadataIpfsHash": "val-20260613124825398591",
+        "softCap": "250000000000",
+        "targetRaise": "850000000000"
+      },
+      "createdAt": "2026-06-13T12:48:25.398786+00:00",
+      "metadata": {
+        "aiScore": 85,
+        "builderAllocBps": 2000,
+        "category": "SaaS",
+        "competitionPrizeBps": 800,
+        "creator": "",
+        "description": "A revenue intelligence product for B2B SaaS companies. It connects Stripe, usage analytics, and customer lifecycle events to detect paid expansion opportunities and revenue proof for investors.",
+        "fundingDays": 30,
+        "gateType": 0,
+        "hardCap": 1000000.0,
+        "milestones": [
+          "Connect Stripe revenue hook",
+          "Ship investor revenue dashboard",
+          "Launch expansion alert engine"
+        ],
+        "oneLiner": "AI tracks usage and expansion revenue for SaaS teams.",
+        "softCap": 250000.0,
+        "stage": "validated",
+        "targetRaise": 850000.0,
+        "title": "Revenue Copilot for SaaS"
+      },
+      "validationId": "val-20260613124825398591"
+    }
+  }
+}
