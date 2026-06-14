@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { AgentsModule } from './agents/agents.module';
 import { IdeasModule } from './ideas/ideas.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { IdeasModule } from './ideas/ideas.module';
     BlockchainModule,
     AgentsModule,
     IdeasModule,
+    OnboardingModule,
   ],
 })
 export class AppModule {}
