@@ -1,6 +1,6 @@
-import { AppShell } from "../components/AppShell";
 import { serverApi } from "../lib/api";
 import { CreateIdeaClient } from "./CreateIdeaClient";
+import DashboardLayout from "../components/DashboardLayout";
 import type { InterfaceAbi } from "ethers";
 import { IDEA_FACTORY_ABI, ERC20_ABI } from "../lib/contracts/abis";
 
@@ -21,8 +21,8 @@ export default async function CreateIdeaPage() {
   };
 
   return (
-    <AppShell>
+    <DashboardLayout>
       <CreateIdeaClient factory={factory} />
-    </AppShell>
+    </DashboardLayout>
   );
 }
