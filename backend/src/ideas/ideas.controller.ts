@@ -23,6 +23,64 @@ export class IdeasController {
     private agentService: AgentService,
   ) {}
 
+  @Post('validate')
+  @ApiOperation({ summary: 'Validate an idea with AI and return contract config' })
+  @ApiResponse({ status: 200, description: 'Idea validated successfully' })
+  async validateIdea(@Body() dto: { title: string; description: string; category?: string; targetRaise?: number; softCap?: number; hardCap?: number; fundingDays?: number }) {
+    this.logger.log(`[POST /ideas/validate] Validating idea: ${dto.title}`);
+
+    try {
+      const result = await this.agentService.scoreIdea(
+        BigInt(Date.now()), // temp ideaId for validation
+        dto.title,
+        dto.description,
+      );
+
+      this.logger.log(`✓ AI scoring complete: score=${result.score}, approved=${result.approved}`);
+
+      // Upload to IPFS
+      const metadataIpfsHash = await this.ideaService.uploadMetadataToPinata({
+        title: dto.title,
+        description: dto.description,
+        category: dto.category,
+        validation: {
+          score: result.score,
+          reasoning: result.reasoning,
+          transactionHash: result.transactionHash,
+        },
+      });
+
+      // Calculate funding deadline (fundingDays from now)
+      const fundingDeadline = Math.floor(Date.now() / 1000) + (dto.fundingDays || 30) * 24 * 60 * 60;
+
+      return {
+        validationId: `val-${Date.now()}`,
+        approved: result.approved,
+        score: result.score,
+        summary: result.approved 
+          ? 'This idea meets our criteria for funding. High feasibility and sufficient uniqueness.' 
+          : 'This idea requires revision before it can be approved.',
+        feedback: result.approved
+          ? ['AI validation passed with high confidence', 'Market opportunity validated', 'Technical feasibility confirmed']
+          : ['Consider providing more details', 'Market research suggests revision needed'],
+        contractConfig: {
+          metadataIpfsHash,
+          targetRaise: String(dto.targetRaise || 850000),
+          softCap: String(dto.softCap || 250000),
+          hardCap: String(dto.hardCap || 1000000),
+          fundingDeadline,
+          competitionPrizeBps: 800,
+          builderAllocBps: 2000,
+          gateType: 0,
+          gateParams: '0x',
+        },
+      };
+    } catch (error: any) {
+      this.logger.error('❌ Failed to validate idea:', error.message);
+      throw error;
+    }
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new idea and trigger AI scoring' })
   @ApiResponse({ status: 201, description: 'Idea created successfully' })

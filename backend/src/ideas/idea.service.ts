@@ -286,4 +286,11 @@ export class IdeaService {
       return hash;
     }
   }
+
+  /**
+   * Public method to upload metadata to Pinata (used by controller)
+   */
+  async uploadMetadataToPinata(metadata: any): Promise<string> {
+    return this.uploadToPinata(metadata);
+  }
 }

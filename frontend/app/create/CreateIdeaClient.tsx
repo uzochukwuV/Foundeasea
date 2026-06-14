@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { BrowserProvider, Contract, InterfaceAbi } from "ethers";
+import { useState } from "react";
+import { BrowserProvider, Contract } from "ethers";
 import { 
   Brain, 
   CheckCircle, 
@@ -16,18 +16,15 @@ import {
   AlertCircle,
   Wallet
 } from "../components/icons";
+import { IDEA_FACTORY_ABI, MOCK_USDY_ABI } from "../lib/contracts/abis";
 
-type FactoryConfig = {
-  chainId: number;
-  chainHex: string;
-  chainName: string;
-  ideaFactory: string;
-  usdy: string;
-  creatorDepositUsdy: number;
-  creatorDepositBaseUnits: string;
-  ideaFactoryAbi: InterfaceAbi;
-  usdyAbi: InterfaceAbi;
-};
+// Contract addresses
+const IDEA_FACTORY_ADDRESS = "0x653993523D605EDE6AdBf021075cE11f0D7f1AE7";
+const USDY_ADDRESS = "0x719238D4B4bD9c6F84a915e045A38362e32667B5";
+const CHAIN_HEX = "0x138b"; // Mantle Sepolia
+const CHAIN_ID = 5003;
+const USDY_DECIMALS = 6;
+const CREATOR_DEPOSIT_USDY = 500;
 
 type ValidationResult = {
   validationId: string;
@@ -46,16 +43,9 @@ type ValidationResult = {
     gateType: number;
     gateParams: string;
   };
-  factory: FactoryConfig;
 };
 
-const apiFetch = async <T,>(path: string, options?: RequestInit): Promise<T> => {
-  const response = await fetch(path, { ...options, cache: "no-store" });
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
-};
-
-export const CreateIdeaClient = ({ factory }: { factory: FactoryConfig }) => {
+export const CreateIdeaClient = () => {
   const [form, setForm] = useState({
     title: "Revenue Copilot for SaaS",
     oneLiner: "AI tracks usage, expansion signals, and revenue hooks so investors see outcomes faster.",
@@ -76,30 +66,14 @@ export const CreateIdeaClient = ({ factory }: { factory: FactoryConfig }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  const payload = useMemo(() => ({
-    creator: wallet,
-    title: form.title,
-    oneLiner: form.oneLiner,
-    description: form.description,
-    category: form.category,
-    targetRaise: Number(form.targetRaise),
-    softCap: Number(form.softCap),
-    hardCap: Number(form.hardCap),
-    fundingDays: Number(form.fundingDays),
-    competitionPrizeBps: Number(form.competitionPrizeBps),
-    builderAllocBps: Number(form.builderAllocBps),
-    gateType: 0,
-    milestones: form.milestones.split("\n").map((item) => item.trim()).filter(Boolean),
-  }), [form, wallet]);
-
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
 
   const connectWallet = async () => {
     if (!window.ethereum) throw new Error("No injected EVM wallet found");
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" }) as string[];
     const chainId = await window.ethereum.request({ method: "eth_chainId" }) as string;
-    if (chainId.toLowerCase() !== factory.chainHex) {
-      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: factory.chainHex }] });
+    if (chainId.toLowerCase() !== CHAIN_HEX) {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX }] });
     }
     setWallet(accounts[0]);
     return accounts[0];
@@ -107,15 +81,31 @@ export const CreateIdeaClient = ({ factory }: { factory: FactoryConfig }) => {
 
   const validate = async () => {
     setIsLoading(true);
-    setStatus("Running backend AI validation...");
+    setStatus("Running AI validation via backend...");
     try {
-      const result = await apiFetch<ValidationResult>("/api/ideas/validate", {
+      const payload = {
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        targetRaise: Number(form.targetRaise),
+        softCap: Number(form.softCap),
+        hardCap: Number(form.hardCap),
+        fundingDays: Number(form.fundingDays),
+      };
+      
+      const response = await fetch("/api/ideas/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      
+      if (!response.ok) throw new Error(await response.text());
+      
+      const result: ValidationResult = await response.json();
       setValidation(result);
-      setStatus(result.approved ? "AI approved. You can now approve USDY and create the idea onchain." : "AI rejected this draft. Update the fields and validate again.");
+      setStatus(result.approved 
+        ? "AI approved! You can now create the idea onchain." 
+        : "AI requires revision. Update the fields and validate again.");
       setCurrentStep(2);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Validation failed");
@@ -131,44 +121,76 @@ export const CreateIdeaClient = ({ factory }: { factory: FactoryConfig }) => {
       setStatus("Connecting wallet...");
       const account = wallet || await connectWallet();
       if (!window.ethereum) throw new Error("No injected EVM wallet found");
+      
       const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const usdy = new Contract(validation.factory.usdy, validation.factory.usdyAbi, signer);
-      const factoryContract = new Contract(validation.factory.ideaFactory, validation.factory.ideaFactoryAbi, signer);
-
-      setStatus("Approving 500 USDY creator deposit...");
-      const approveTx = await usdy.approve(validation.factory.ideaFactory, validation.factory.creatorDepositBaseUnits);
+      
+      // Check USDY balance
+      const usdy = new Contract(USDY_ADDRESS, MOCK_USDY_ABI, signer);
+      const balance = await usdy.balanceOf(account) as bigint;
+      const requiredDeposit = BigInt(CREATOR_DEPOSIT_USDY) * BigInt(10) ** BigInt(USDY_DECIMALS);
+      
+      if (balance < requiredDeposit) {
+        throw new Error(`Insufficient USDY balance. Need ${CREATOR_DEPOSIT_USDY} USDY, have ${Number(balance) / Number(10 ** USDY_DECIMALS)} USDY`);
+      }
+      
+      setStatus("Approving 500 USDY deposit...");
+      const approveTx = await usdy.approve(IDEA_FACTORY_ADDRESS, requiredDeposit);
       await approveTx.wait();
-
+      
+      // Create idea on factory
+      const factory = new Contract(IDEA_FACTORY_ADDRESS, IDEA_FACTORY_ABI, signer);
+      
+      setStatus("Creating idea on IdeaFactory smart contract...");
       const configTuple = [
         validation.contractConfig.metadataIpfsHash,
-        BigInt(validation.contractConfig.targetRaise),
-        BigInt(validation.contractConfig.softCap),
-        BigInt(validation.contractConfig.hardCap),
+        BigInt(validation.contractConfig.targetRaise) * BigInt(10 ** USDY_DECIMALS),
+        BigInt(validation.contractConfig.softCap) * BigInt(10 ** USDY_DECIMALS),
+        BigInt(validation.contractConfig.hardCap) * BigInt(10 ** USDY_DECIMALS),
         BigInt(validation.contractConfig.fundingDeadline),
         BigInt(validation.contractConfig.competitionPrizeBps),
         BigInt(validation.contractConfig.builderAllocBps),
         validation.contractConfig.gateType,
         validation.contractConfig.gateParams,
       ];
-      setStatus("Creating idea on IdeaFactory smart contract...");
-      const createTx = await factoryContract.createIdea(configTuple);
+      
+      const createTx = await factory.createIdea(configTuple);
       setTxHash(createTx.hash);
       const receipt = await createTx.wait();
-
-      setStatus("Registering transaction with backend...");
-      await apiFetch("/api/ideas/created", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ validationId: validation.validationId, txHash: createTx.hash, creator: account }),
-      });
-      setStatus(`Idea created onchain in block ${receipt.blockNumber}. Discover will include it after contract read refresh.`);
+      
+      // Extract ideaId from event logs
+      let ideaId = BigInt(0);
+      for (const log of receipt.logs) {
+        if (log.topics && log.topics.length > 0) {
+          const topic0 = log.topics[0].toLowerCase();
+          // Check for IdeaCreated event signature
+          const eventSignature = '0x' + 'IdeaCreated'.split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+          if (topic0 === eventSignature) {
+            ideaId = BigInt(log.topics[1]);
+            break;
+          }
+        }
+      }
+      
+      setStatus(`Idea created onchain in block ${receipt.blockNumber}. Idea ID: ${ideaId}. AI will review and approve/reject.`);
       setCurrentStep(3);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Onchain creation failed");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleValidate = async () => {
+    if (!wallet && window.ethereum) {
+      await connectWallet();
+    }
+    await validate();
+  };
+
+  const handleCreate = async () => {
+    if (!validation?.approved) return;
+    await createOnchain();
   };
 
   return (
@@ -505,22 +527,22 @@ export const CreateIdeaClient = ({ factory }: { factory: FactoryConfig }) => {
                 <div className="rounded-lg bg-[#050505] p-3">
                   <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">IdeaFactory</p>
                   <p className="mt-1 break-all font-mono text-xs text-[#0052FF]">
-                    {factory.ideaFactory || "Not configured"}
+                    {IDEA_FACTORY_ADDRESS}
                   </p>
                 </div>
                 <div className="rounded-lg bg-[#050505] p-3">
                   <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">USDY Token</p>
                   <p className="mt-1 break-all font-mono text-xs text-[#0052FF]">
-                    {factory.usdy || "Not configured"}
+                    {USDY_ADDRESS}
                   </p>
                 </div>
                 <div className="rounded-lg bg-[#050505] p-3">
                   <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Creator Deposit</p>
-                  <p className="mt-1 font-mono text-sm text-white">{factory.creatorDepositUsdy} USDY</p>
+                  <p className="mt-1 font-mono text-sm text-white">{CREATOR_DEPOSIT_USDY} USDY</p>
                 </div>
                 <div className="rounded-lg bg-[#050505] p-3">
                   <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Network</p>
-                  <p className="mt-1 font-mono text-sm text-white">{factory.chainName}</p>
+                  <p className="mt-1 font-mono text-sm text-white">Mantle Sepolia</p>
                 </div>
               </div>
             </div>
