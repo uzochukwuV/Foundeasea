@@ -247,8 +247,16 @@ export class ContractService implements OnModuleInit {
     return this.getContractWrapper(address, daoVotingAbi as any);
   }
 
+  getDAOVotingAddress(): string {
+    return this.configService.get('DAO_VOTING_MANTLE') as string;
+  }
+
   getDAOVotingAbi(): any {
     return daoVotingAbi as any;
+  }
+
+  getIdeaTokenAbi(): any {
+    return ideaTokenAbi as any;
   }
 
   getBuilderAgreement() {

@@ -6,6 +6,7 @@
   "/builders/page": "app/builders/page.js",
   "/chair/[ideaId]/page": "app/chair/[ideaId]/page.js",
   "/create/page": "app/create/page.js",
+  "/dao/proposal/[id]/page": "app/dao/proposal/[id]/page.js",
   "/discover/page": "app/discover/page.js",
   "/flow/page": "app/flow/page.js",
   "/ideas/[id]/page": "app/ideas/[id]/page.js",
