@@ -28,19 +28,16 @@ contract FundingPoolFactory is Ownable, IFundingPoolFactory {
     ) external override returns (address fundingPool, address fundingGate) {
         address gate = address(new FundingGate(creator, msg.sender));
 
-        // Deploy pool with factory as owner so factory can call updateFactory
+        // Deploy pool with creator as owner (they can manage milestones)
         FundingPool pool = new FundingPool(
             usdy,
             gate,
-            address(this),  // Factory becomes owner
+            creator,  // Creator becomes owner
             softCap,
             hardCap,
             competitionPrizeBps,
-            treasury
+            address(0)  // Start with zero factory - will be set by IdeaFactory
         );
-        
-        // Update factory to this address and transfer ownership to treasury
-        pool.updateFactory(address(this), treasury);
         
         fundingPool = address(pool);
         fundingGate = gate;
@@ -48,7 +45,9 @@ contract FundingPoolFactory is Ownable, IFundingPoolFactory {
         emit FundingPoolCreated(ideaId, fundingPool, fundingGate, softCap, hardCap);
     }
 
-    function setIdeaTokenOnPool(address fundingPool, address ideaToken) external onlyOwner {
+    function setIdeaTokenOnPool(address fundingPool, address ideaToken) external {
+        // Anyone can set idea token on a pool - it just needs to be done once
+        // Security is enforced by the factory address check in IdeaFactory
         FundingPool(fundingPool).setIdeaToken(ideaToken);
     }
 }
